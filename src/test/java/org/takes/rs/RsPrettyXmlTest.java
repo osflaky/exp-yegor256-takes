@@ -1,0 +1,213 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.rs;
+
+import java.io.IOException;
+import org.cactoos.io.InputStreamOf;
+import org.cactoos.text.Joined;
+import org.cactoos.text.TextOf;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.hamcrest.core.IsEqual;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.takes.Response;
+
+/**
+ * Test case for {@link RsPrettyXml}.
+ *
+ * @since 1.0
+ */
+@SuppressWarnings({"PMD.UnnecessaryLocalRule", "PMD.CloseInlineResourceRule"})
+final class RsPrettyXmlTest {
+
+    /**
+     * Linefeed character.
+     */
+    private static final String LF = String.valueOf((char) 10);
+
+    @Test
+    void formatsXmlBody() throws IOException {
+        MatcherAssert.assertThat(
+            "Pretty XML formatter must format XML with proper indentation",
+            new RsBodyPrint(
+                new RsPrettyXml(
+                    new RsWithBody("<test><a>foo</a></test>")
+                )
+            ).asString(),
+            Matchers.is(
+                String.format(
+                    "<test>%1$s   <a>foo</a>%1$s</test>%1$s",
+                    RsPrettyXmlTest.LF
+                )
+            )
+        );
+    }
+
+    @Test
+    // @checkstyle MethodNameCheck (1 line)
+    void formatsHtml5DoctypeBody() throws IOException {
+        MatcherAssert.assertThat(
+            "Pretty XML with HTML5 doctype must contain uppercase DOCTYPE",
+            new RsBodyPrint(
+                new RsPrettyXml(
+                    new RsWithBody(
+                        "<!DOCTYPE html><html><head></head><body></body></html>"
+                    )
+                )
+            ).asString(),
+            Matchers.containsString("<!DOCTYPE HTML>")
+        );
+    }
+
+    @Test
+    // @checkstyle MethodNameCheck (1 line)
+    void formatsHtml5ForLegacyBrowsersDoctypeBody() throws IOException {
+        MatcherAssert.assertThat(
+            "Pretty XML with legacy HTML doctype must format correctly",
+            new TextOf(
+                new RsBodyPrint(
+                    new RsPrettyXml(
+                        new RsWithBody(
+                            new InputStreamOf(
+                                new Joined(
+                                    "",
+                                    "<!DOCTYPE html ",
+                                    "SYSTEM \"about:legacy-compat\">",
+                                    "<html><head></head><body></body></html>"
+                                )
+                            )
+                        )
+                    )
+                ).asString()
+            ),
+            new IsEqual<>(
+                new Joined(
+                    "",
+                    String.format("<!DOCTYPE html%s", RsPrettyXmlTest.LF),
+                    String.format(
+                        "  SYSTEM \"about:legacy-compat\">%s",
+                        RsPrettyXmlTest.LF
+                    ),
+                    String.format("<html>%s", RsPrettyXmlTest.LF),
+                    String.format("   <head>%s", RsPrettyXmlTest.LF),
+                    "      <meta http-equiv=\"Content-Type\"",
+                    String.format(
+                        " content=\"text/html; charset=UTF-8\">%s",
+                        RsPrettyXmlTest.LF
+                    ),
+                    String.format("   </head>%s", RsPrettyXmlTest.LF),
+                    String.format("   <body></body>%s", RsPrettyXmlTest.LF),
+                    "</html>"
+                )
+            )
+        );
+    }
+
+    @Test
+    // @checkstyle MethodNameCheck (1 line)
+    void formatsHtml4DoctypeBody() throws IOException {
+        final String pid = "PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" ";
+        final String xhtml = "<html xmlns=\"http://www.w3.org/1999/xhtml\" "
+            .concat("lang=\"en\">");
+        MatcherAssert.assertThat(
+            "Pretty XML with HTML4 doctype must format correctly",
+            new TextOf(
+                new RsBodyPrint(
+                    new RsPrettyXml(
+                        new RsWithBody(
+                            new InputStreamOf(
+                                new Joined(
+                                    "",
+                                    "<!DOCTYPE HTML ",
+                                    pid,
+                                    "\"http://www.w3.org/TR/html4/loose.dtd\">",
+                                    xhtml,
+                                    "<head><a>foo</a></head>",
+                                    "<body>this is body</body></html>"
+                                )
+                            )
+                        )
+                    )
+                ).asString()
+            ),
+            new IsEqual<>(
+                new Joined(
+                    "",
+                    String.format("<!DOCTYPE html%s  ", RsPrettyXmlTest.LF),
+                    pid,
+                    String.format(
+                        "\"http://www.w3.org/TR/html4/loose.dtd\">%s",
+                        RsPrettyXmlTest.LF
+                    ),
+                    xhtml,
+                    String.format(
+                        "%1$s   <head>%1$s      ",
+                        RsPrettyXmlTest.LF
+                    ),
+                    "<meta http-equiv=\"Content-Type\" content=\"text/html; ",
+                    String.format(
+                        "charset=UTF-8\" /><a>foo</a></head>%s   ",
+                        RsPrettyXmlTest.LF
+                    ),
+                    String.format(
+                        "<body>this is body</body>%s</html>",
+                        RsPrettyXmlTest.LF
+                    )
+                )
+            )
+        );
+    }
+
+    @Test
+    void formatsNonXmlBody() {
+        Assertions.assertThrows(
+            IOException.class,
+            () -> new RsBodyPrint(new RsPrettyXml(new RsWithBody("foo"))).asString()
+        );
+    }
+
+    @Test
+    void reportsCorrectContentLength() throws IOException {
+        final int clength = new RsBodyPrint(
+            new RsWithBody(
+                String.format(
+                    "<test>%1$s   <a>test</a>%1$s</test>%1$s",
+                    RsPrettyXmlTest.LF
+                )
+            )
+        ).asString().length();
+        MatcherAssert.assertThat(
+            "Pretty XML response must report correct content length",
+            new RsHeadPrint(
+                new RsPrettyXml(
+                    new RsWithBody("<test><a>test</a></test>")
+                )
+            ).asString(),
+            Matchers.containsString(
+                String.format(
+                    "Content-Length: %d",
+                    clength
+                )
+            )
+        );
+    }
+
+    @Test
+    void conformsToEqualsTest() {
+        final Response response = new RsWithBody("<test> <a>test</a></test>");
+        MatcherAssert.assertThat(
+            "Must evaluate true equality",
+            new RsPrettyXml(
+                response
+            ),
+            new IsEqual<>(
+                new RsPrettyXml(
+                    response
+                )
+            )
+        );
+    }
+}

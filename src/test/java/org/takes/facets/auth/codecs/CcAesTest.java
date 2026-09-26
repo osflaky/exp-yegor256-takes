@@ -1,0 +1,218 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.codecs;
+
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.SecureRandomSpi;
+import java.util.Arrays;
+import javax.crypto.KeyGenerator;
+import javax.crypto.spec.SecretKeySpec;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.takes.facets.auth.Identity;
+
+/**
+ * Test case for {@link CcAes}.
+ *
+ * @since 0.13.8
+ */
+@SuppressWarnings("PMD.UnnecessaryLocalRule")
+final class CcAesTest {
+
+    /**
+     * Test AES key for encryption tests.
+     */
+    private static final byte[] TEST_KEY = {
+        (byte) -25, (byte) 62, (byte) 118, (byte) 92,
+        (byte) -35, (byte) -24, (byte) 92, (byte) 48,
+        (byte) 5, (byte) -4, (byte) -88, (byte) -95,
+        (byte) -110, (byte) -54, (byte) 43, (byte) -1,
+    };
+
+    /**
+     * Test AES key for decryption tests.
+     */
+    private static final byte[] DECRYPT_KEY = {
+        (byte) 25, (byte) 92, (byte) 9, (byte) -75,
+        (byte) 54, (byte) 20, (byte) -118, (byte) 73,
+        (byte) -2, (byte) 81, (byte) 24, (byte) -5,
+        (byte) 20, (byte) 122, (byte) 92, (byte) -128,
+    };
+
+    /**
+     * Test random bytes for IV in encryption tests.
+     */
+    private static final byte[] TEST_RANDOM = {
+        (byte) 63, (byte) -27, (byte) -43, (byte) -52,
+        (byte) -70, (byte) -44, (byte) 86, (byte) -43,
+        (byte) -43, (byte) 116, (byte) -122, (byte) 105,
+        (byte) 108, (byte) -25, (byte) -126, (byte) 90,
+    };
+
+    @Test
+    void encryptedStartsWithIv() throws Exception {
+        MatcherAssert.assertThat(
+            "Encrypted identity does not start with IV",
+            Arrays.copyOf(CcAesTest.encrypt(), 16),
+            Matchers.equalTo(CcAesTest.TEST_RANDOM)
+        );
+    }
+
+    @Test
+    void encryptedMessageMatches() throws Exception {
+        final byte[] encrypted = CcAesTest.encrypt();
+        final byte[] message = new byte[encrypted.length - 16];
+        System.arraycopy(encrypted, 16, message, 0, message.length);
+        MatcherAssert.assertThat(
+            "Encrypted message did not match",
+            message,
+            Matchers.equalTo(
+                new byte[]{
+                    (byte) -119, (byte) -114, (byte) 19, (byte) 21,
+                    (byte) 77, (byte) 59, (byte) 22, (byte) 100,
+                    (byte) 121, (byte) -116, (byte) -43, (byte) 24,
+                    (byte) 86, (byte) 24, (byte) -42, (byte) 119,
+                }
+            )
+        );
+    }
+
+    @Test
+    void decryptIdentity() throws Exception {
+        final byte[] encrypted = {
+            (byte) 83, (byte) -12, (byte) -8, (byte) 30,
+            (byte) -24, (byte) -5, (byte) -72, (byte) -33,
+            (byte) 13, (byte) 57, (byte) -37, (byte) -47,
+            (byte) -95, (byte) 108, (byte) 43, (byte) 101,
+            (byte) -87, (byte) -108, (byte) -41, (byte) 0,
+            (byte) 97, (byte) 1, (byte) -120, (byte) -39,
+            (byte) -114, (byte) 80, (byte) 18, (byte) -76,
+            (byte) -12, (byte) 10, (byte) -50, (byte) 51,
+            (byte) 66, (byte) 11, (byte) 13, (byte) -115,
+            (byte) 17, (byte) -41, (byte) -84, (byte) -78,
+            (byte) 48, (byte) 47, (byte) 42, (byte) -92,
+            (byte) -127, (byte) 16, (byte) -74, (byte) -61,
+        };
+        MatcherAssert.assertThat(
+            "CcAes must decrypt identity correctly to original URN",
+            new CcAes(
+                new CcTest(),
+                new SecureRandom(),
+                new SecretKeySpec(CcAesTest.DECRYPT_KEY, "AES")
+            ).decode(encrypted).urn(),
+            Matchers.equalTo("urn:github:29835")
+        );
+    }
+
+    @Test
+    void encodesAndDecodes() throws Exception {
+        final int length = 128;
+        final KeyGenerator generator = KeyGenerator.getInstance("AES");
+        generator.init(length);
+        final byte[] key = generator.generateKey().getEncoded();
+        final String plain = "This is a test!!@@**";
+        final Codec codec = new CcAes(new CcTest(), key);
+        MatcherAssert.assertThat(
+            "CcAes must encode and decode identity preserving original value",
+            codec.decode(codec.encode(new Identity.Simple(plain))).urn(),
+            Matchers.equalTo(plain)
+        );
+    }
+
+    @Test
+    void throwsRightWhenBroken() {
+        Assertions.assertThrows(
+            DecodingException.class,
+            () -> new CcAes(
+                new CcPlain(), "0123456701234567"
+            ).decode("broken input".getBytes(StandardCharsets.UTF_8))
+        );
+    }
+
+    private static byte[] encrypt() throws Exception {
+        return new CcAes(
+            new CcTest(),
+            new CcAesTest.FkRandom(CcAesTest.TEST_RANDOM),
+            new SecretKeySpec(CcAesTest.TEST_KEY, "AES")
+        ).encode(new Identity.Simple("urg:github:0000"));
+    }
+
+    /**
+     * Fake random with provided random result.
+     *
+     * @since 0.13.8
+     */
+    private static final class FkRandom extends SecureRandom {
+
+        /**
+         * Serial id.
+         */
+        private static final long serialVersionUID = 8646596235826414879L;
+
+        /**
+         * Ctor.
+         *
+         * @param fake Bytes
+         */
+        FkRandom(final byte[] fake) {
+            super(new CcAesTest.FkRandomSpi(fake), null);
+        }
+    }
+
+    /**
+     * Fake random SPI.
+     *
+     * @since 0.13.8
+     */
+    @SuppressWarnings({
+        "PMD.UncommentedEmptyMethodBody",
+        "PMD.JUnitTestClassShouldBeFinal"
+    })
+    private static class FkRandomSpi extends SecureRandomSpi {
+
+        /**
+         * Serial id.
+         */
+        private static final long serialVersionUID = -5153681125995322457L;
+
+        /**
+         * Bytes.
+         */
+        private final byte[] fake;
+
+        /**
+         * Ctor.
+         *
+         * @param fake Bytes
+         */
+        @SuppressWarnings("PMD.ArrayIsStoredDirectly")
+        FkRandomSpi(final byte[] fake) {
+            super();
+            this.fake = fake;
+        }
+
+        @Override
+        protected void engineSetSeed(final byte[] bytes) {
+        }
+
+        @Override
+        protected void engineNextBytes(final byte[] bytes) {
+            if (bytes.length > this.fake.length) {
+                throw new UnsupportedOperationException(
+                    "Byte-array is too big"
+                );
+            }
+            System.arraycopy(this.fake, 0, bytes, 0, bytes.length);
+        }
+
+        @Override
+        protected byte[] engineGenerateSeed(final int length) {
+            return new byte[length];
+        }
+    }
+}

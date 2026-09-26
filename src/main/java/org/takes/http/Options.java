@@ -1,0 +1,181 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.http;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.net.ServerSocket;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import lombok.EqualsAndHashCode;
+import org.cactoos.io.ReaderOf;
+import org.cactoos.io.WriterTo;
+import org.cactoos.list.ListOf;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.UncheckedText;
+
+/**
+ * Command-line options.
+ *
+ * <p>This class parses and provides access to command-line options
+ * for configuring the HTTP server. It supports options such as port
+ * specification, daemon mode, thread count, hit-refresh mode, and
+ * maximum latency settings.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.2
+ */
+@EqualsAndHashCode
+@SuppressWarnings("PMD.CloseInlineResourceRule")
+final class Options {
+
+    /**
+     * Map of arguments and their values.
+     */
+    private final Map<String, String> map;
+
+    /**
+     * Constructs an {@code Options} with the specified arguments.
+     *
+     * @param args Arguments
+     * @since 0.9
+     */
+    Options(final String... args) {
+        this(new ListOf<>(args));
+    }
+
+    /**
+     * Constructs an {@code Options} with the specified arguments.
+     *
+     * @param args Arguments
+     */
+    Options(final Iterable<String> args) {
+        this.map = new LazyMap(args);
+    }
+
+    /**
+     * Is it a daemon?
+     *
+     * @return TRUE if yes
+     */
+    boolean isDaemon() {
+        return this.map.containsKey("daemon");
+    }
+
+    /**
+     * Get the socket to listen to.
+     *
+     * @return Socket
+     * @throws IOException If fails
+     */
+    ServerSocket socket() throws IOException {
+        final String port = this.map.get("port");
+        if (port == null) {
+            throw new IllegalArgumentException("--port must be specified");
+        }
+        final ServerSocket socket;
+        if (port.matches("\\d+")) {
+            socket = new ServerSocket(Integer.parseInt(port));
+        } else {
+            final File file = new File(port);
+            if (file.exists()) {
+                try (Reader reader = new ReaderOf(file.toPath())) {
+                    final char[] chars = new char[8];
+                    socket = new ServerSocket(
+                        Integer.parseInt(
+                            new String(chars, 0, reader.read(chars))
+                        )
+                    );
+                }
+            } else {
+                socket = new ServerSocket(0);
+                try (Writer writer = new WriterTo(file.toPath())) {
+                    writer.append(Integer.toString(socket.getLocalPort()));
+                }
+            }
+        }
+        return socket;
+    }
+
+    /**
+     * Are we in hit-refresh mode?
+     *
+     * @return TRUE if this mode is ON
+     * @since 0.9
+     */
+    boolean hitRefresh() {
+        return this.map.containsKey("hit-refresh");
+    }
+
+    /**
+     * Get the lifetime in milliseconds.
+     *
+     * @return Port number
+     */
+    long lifetime() {
+        return Long.parseLong(
+            this.map.getOrDefault(
+                "lifetime", String.valueOf(Long.MAX_VALUE)
+            )
+        );
+    }
+
+    /**
+     * Get the threads.
+     *
+     * @return Threads
+     */
+    int threads() {
+        return Integer.parseInt(
+            this.map.getOrDefault(
+                "threads",
+                String.valueOf(Runtime.getRuntime().availableProcessors() << 2)
+            )
+        );
+    }
+
+    /**
+     * Get the max latency in milliseconds.
+     *
+     * @return Latency
+     */
+    long maxLatency() {
+        return Long.parseLong(
+            this.map.getOrDefault(
+                "max-latency",
+                String.valueOf(Long.MAX_VALUE)
+            )
+        );
+    }
+
+    static Map<String, String> asMap(final Iterable<String> args) {
+        final Map<String, String> map = new HashMap<>(0);
+        final Pattern ptn = Pattern.compile("--([a-z\\-]+)(=.+)?");
+        for (final String arg : args) {
+            final Matcher matcher = ptn.matcher(arg);
+            if (!matcher.matches()) {
+                throw new IllegalStateException(
+                    new UncheckedText(
+                        new FormattedText(
+                            "Can't parse this argument: '%s'", arg
+                        )
+                    ).asString()
+                );
+            }
+            final String value = matcher.group(2);
+            if (value == null) {
+                map.put(matcher.group(1), "");
+            } else {
+                map.put(matcher.group(1), value.substring(1));
+            }
+        }
+        return map;
+    }
+}

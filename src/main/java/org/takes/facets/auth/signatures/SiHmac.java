@@ -1,0 +1,116 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.signatures;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.EqualsAndHashCode;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.UncheckedText;
+
+/**
+ * An HMAC signature implementation that supports 256, 384, and 512-bit hash variants.
+ *
+ * <p>This class provides HMAC (Hash-based Message Authentication Code) signature
+ * functionality using SHA-256, SHA-384, or SHA-512 algorithms. It creates hex-encoded
+ * signatures from input data using a secret key. The class is immutable and thread-safe.</p>
+ *
+ * @since 1.4
+ */
+@EqualsAndHashCode
+public final class SiHmac implements Signature {
+
+    /**
+     * The HMAC 256 bit variant.
+     */
+    public static final int HMAC256 = 256;
+
+    /**
+     * The HMAC 384 bit variant.
+     */
+    public static final int HMAC384 = 384;
+
+    /**
+     * The HMAC 512 bit variant.
+     */
+    public static final int HMAC512 = 512;
+
+    /**
+     * The encryption key.
+     */
+    private final byte[] key;
+
+    /**
+     * The bit length parameter.
+     */
+    private final int bits;
+
+    /**
+     * Primary constructor with byte array key and specified bit length.
+     *
+     * @param key The encryption key as a byte array
+     * @param bits The signature bit length (256, 384, or 512)
+     */
+    @SuppressWarnings("PMD.ArrayIsStoredDirectly")
+    public SiHmac(final byte[] key, final int bits) {
+        this.key = key;
+        this.bits = bits;
+    }
+
+    /**
+     * Returns the corrected signature bit length.
+     *
+     * @return The bit length used for HMAC signature, normalised to 256
+     *  if the configured value is not 256, 384 or 512
+     */
+    public int bitlength() {
+        return SiHmac.bitLength(this.bits);
+    }
+
+    @Override
+    public byte[] sign(final byte[] data) throws IOException {
+        return this.encrypt(data);
+    }
+
+    private static int bitLength(final int bits) {
+        int correct = bits;
+        if (bits != SiHmac.HMAC256
+            && bits != SiHmac.HMAC384
+            && bits != SiHmac.HMAC512) {
+            correct = SiHmac.HMAC256;
+        }
+        return correct;
+    }
+
+    private byte[] encrypt(final byte[] bytes) throws IOException {
+        final byte[] result = this.create().doFinal(bytes);
+        final char[] hex = new char[result.length * 2];
+        for (int idx = 0; idx < result.length; idx = idx + 1) {
+            final int val = result[idx] & 0xFF;
+            hex[idx * 2] = Character.forDigit(val >>> 4, 16);
+            hex[idx * 2 + 1] = Character.forDigit(val & 0x0F, 16);
+        }
+        return new String(hex).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private Mac create() throws IOException {
+        final String algo = new UncheckedText(
+            new FormattedText(
+                "HmacSHA%s", this.bitlength()
+            )
+        ).asString();
+        try {
+            final Mac mac = Mac.getInstance(algo);
+            mac.init(new SecretKeySpec(this.key, algo));
+            return mac;
+        } catch (final NoSuchAlgorithmException | InvalidKeyException ex) {
+            throw new IOException(ex);
+        }
+    }
+}

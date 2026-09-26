@@ -1,0 +1,126 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+
+package org.takes.facets.hamcrest;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import org.cactoos.text.TextOf;
+import org.cactoos.text.Trimmed;
+import org.cactoos.text.UncheckedText;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
+import org.hamcrest.text.IsEqualIgnoringCase;
+import org.takes.Head;
+
+/**
+ * Header Matcher.
+ *
+ * <p>This "matcher" tests given item headers.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @param <T> Item type. Should be able to return own headers
+ * @since 0.31.2
+ */
+public final class HmHeader<T extends Head> extends TypeSafeMatcher<T> {
+
+    /**
+     * Values string used in description of mismatches.
+     */
+    private static final String VALUES_STR = " -> values: ";
+
+    /**
+     * Header matcher.
+     */
+    private final Matcher<String> header;
+
+    /**
+     * Value matcher.
+     */
+    private final Matcher<Iterable<String>> value;
+
+    /**
+     * Mismatched header values.
+     */
+    private Collection<String> failed;
+
+    /**
+     * Ctor.
+     *
+     * @param hdr Header name
+     * @param vlm Value matcher
+     */
+    public HmHeader(final String hdr, final Matcher<Iterable<String>> vlm) {
+        this(new IsEqualIgnoringCase(hdr), vlm);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param hdrm Header matcher
+     * @param vlm Value matcher
+     */
+    public HmHeader(final Matcher<String> hdrm,
+        final Matcher<Iterable<String>> vlm) {
+        super();
+        this.header = hdrm;
+        this.value = vlm;
+    }
+
+    @Override
+    public void describeTo(final Description description) {
+        description.appendText("header: ")
+            .appendDescriptionOf(this.header)
+            .appendText(HmHeader.VALUES_STR)
+            .appendDescriptionOf(this.value);
+    }
+
+    @Override
+    public boolean matchesSafely(final T item) {
+        try {
+            final Iterator<String> headers = HmHeader.headers(item).iterator();
+            final Collection<String> values = new ArrayList<>(0);
+            while (headers.hasNext()) {
+                final String[] parts = HmHeader.split(headers.next());
+                if (this.header.matches(
+                    new UncheckedText(new Trimmed(new TextOf(parts[0]))).asString()
+                )) {
+                    values.add(
+                        new UncheckedText(new Trimmed(new TextOf(parts[1]))).asString()
+                    );
+                }
+            }
+            final boolean result = this.value.matches(values);
+            if (!result) {
+                this.failed = values;
+            }
+            return result;
+        } catch (final IOException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    @Override
+    public void describeMismatchSafely(final T item,
+        final Description description) {
+        description.appendText("header was: ")
+            .appendDescriptionOf(this.header)
+            .appendText(HmHeader.VALUES_STR)
+            .appendValue(this.failed);
+    }
+
+    private static Iterable<String> headers(final Head item) throws
+        IOException {
+        return item.head();
+    }
+
+    private static String[] split(final String header) {
+        return header.split(":", 2);
+    }
+}

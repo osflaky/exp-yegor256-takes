@@ -1,0 +1,90 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.codecs;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Base64;
+import lombok.EqualsAndHashCode;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.UncheckedText;
+import org.takes.facets.auth.Identity;
+
+/**
+ * Base64 codec that encodes identity data using standard Base64 encoding.
+ *
+ * <p>This codec decorator applies Base64 encoding to make binary data
+ * safe for transmission over text-based protocols. It wraps another codec
+ * and converts its binary output to Base64-encoded strings, which can be
+ * safely transmitted via HTTP headers, URLs, or stored in text formats.</p>
+ *
+ * <p>During decoding, it validates that all input characters are legal
+ * Base64 characters before attempting to decode, throwing a
+ * {@link DecodingException} if illegal characters are found.</p>
+ *
+ * <p>Usage example:</p>
+ * <pre> {@code
+ * final Codec codec = new CcBase64(new CcCompact());
+ * final Identity identity = new Identity.Simple("urn:user:john", props);
+ * final byte[] encoded = codec.encode(identity); // Base64-encoded
+ * final Identity decoded = codec.decode(encoded); // validated and decoded
+ * }</pre>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.13
+ */
+@EqualsAndHashCode
+public final class CcBase64 implements Codec {
+
+    /**
+     * Original codec.
+     */
+    private final Codec origin;
+
+    /**
+     * Ctor.
+     *
+     * @param codec Original codec
+     */
+    public CcBase64(final Codec codec) {
+        this.origin = codec;
+    }
+
+    @Override
+    public byte[] encode(final Identity identity) throws IOException {
+        return Base64.getEncoder().encode(this.origin.encode(identity));
+    }
+
+    @Override
+    public Identity decode(final byte[] bytes) throws IOException {
+        final byte[] illegal = CcBase64.checkIllegalCharacters(bytes);
+        if (illegal.length > 0) {
+            throw new DecodingException(
+                new UncheckedText(
+                    new FormattedText(
+                        "Illegal character in Base64 encoded data. %s",
+                        Arrays.toString(illegal)
+                    )
+                ).asString()
+                );
+        }
+        return this.origin.decode(Base64.getDecoder().decode(bytes));
+    }
+
+    private static byte[] checkIllegalCharacters(final byte[] bytes) {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (final byte the : bytes) {
+            final int idx =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+                    .indexOf(the);
+            if (idx < 0) {
+                out.write(the);
+            }
+        }
+        return out.toByteArray();
+    }
+}

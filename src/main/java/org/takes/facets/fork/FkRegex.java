@@ -1,0 +1,227 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import lombok.EqualsAndHashCode;
+import org.cactoos.Scalar;
+import org.cactoos.scalar.Sticky;
+import org.cactoos.scalar.Unchecked;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.Take;
+import org.takes.misc.Opt;
+import org.takes.rq.RqHref;
+import org.takes.tk.TkFixed;
+import org.takes.tk.TkText;
+
+/**
+ * Fork by regular expression pattern.
+ *
+ * <p>Use this class in combination with {@link TkFork},
+ * for example:</p>
+ *
+ * <pre> Take take = new TkFork(
+ *   new FkRegex("/home", new TkHome()),
+ *   new FkRegex("/account", new TkAccount())
+ * );</pre>
+ *
+ * <p>Each instance of {@link org.takes.facets.fork.FkRegex} is being
+ * asked only once by {@link TkFork} whether the
+ * request is good enough to be processed. If the request is suitable
+ * for this particular fork, it will return the relevant
+ * {@link org.takes.Take}.</p>
+ *
+ * <p>Also, keep in mind that the second argument of the constructor may
+ * be of type {@link TkRegex} and accept an
+ * instance of {@link org.takes.facets.fork.RqRegex}, which makes it very
+ * convenient to reuse regular expression matcher, for example:</p>
+ *
+ * <pre> Take take = new TkFork(
+ *   new FkRegex(
+ *     "/file(.*)",
+ *     new Target&lt;RqRegex&gt;() {
+ *       &#64;Override
+ *       public Response act(final RqRegex req) {
+ *         // Here we immediately getting access to the
+ *         // matcher that was used during parsing of
+ *         // the incoming request
+ *         final String file = req.matcher().group(1);
+ *       }
+ *     }
+ *   )
+ * );</pre>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @see TkFork
+ * @see TkRegex
+ * @since 0.4
+ */
+@EqualsAndHashCode
+public final class FkRegex implements Fork {
+
+    /**
+     * Pattern flags for case-insensitive multiline matching.
+     */
+    private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.DOTALL;
+
+    /**
+     * Pattern (lazy).
+     */
+    private final Scalar<Pattern> pattern;
+
+    /**
+     * Target.
+     */
+    private final Scalar<TkRegex> target;
+
+    /**
+     * Remove trailing slashes is optional.
+     */
+    private boolean removeslash;
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param text Text
+     */
+    public FkRegex(final String ptn, final String text) {
+        this(ptn, new TkText(text));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param rsp Response
+     * @since 0.16
+     */
+    public FkRegex(final String ptn, final Response rsp) {
+        this(ptn, new TkFixed(rsp));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param rsp Response
+     * @since 0.16
+     */
+    public FkRegex(final Pattern ptn, final Response rsp) {
+        this(ptn, new TkFixed(rsp));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param that Take
+     */
+    public FkRegex(final String ptn, final Take that) {
+        this(ptn, (TkRegex) req -> that.act(req));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param that Take
+     */
+    public FkRegex(final Pattern ptn, final Take that) {
+        this(ptn, (TkRegex) req -> that.act(req));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param that Take
+     */
+    public FkRegex(final String ptn, final TkRegex that) {
+        this((Scalar<Pattern>) () -> Pattern.compile(ptn, FkRegex.FLAGS), that);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param that Take
+     */
+    public FkRegex(final Pattern ptn, final TkRegex that) {
+        this((Scalar<Pattern>) () -> ptn, that);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern
+     * @param that Take
+     * @since 1.4
+     */
+    public FkRegex(final Pattern ptn, final Scalar<TkRegex> that) {
+        this((Scalar<Pattern>) () -> ptn, that);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern (lazy)
+     * @param that Take
+     */
+    private FkRegex(final Scalar<Pattern> ptn, final TkRegex that) {
+        this(ptn, (Scalar<TkRegex>) () -> that);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param ptn Pattern (lazy)
+     * @param that Take
+     */
+    private FkRegex(final Scalar<Pattern> ptn, final Scalar<TkRegex> that) {
+        this.pattern = new Sticky<>(ptn);
+        this.target = that;
+        this.removeslash = true;
+    }
+
+    /**
+     * Allows disabling the standard way for handling trailing slashes.
+     *
+     * @param enabled Enables/Disables the removal of a trailing slash
+     * @return FkRegex
+     */
+    public FkRegex setRemoveTrailingSlash(final boolean enabled) {
+        this.removeslash = enabled;
+        return this;
+    }
+
+    @Override
+    public Opt<Response> route(final Request req) throws Exception {
+        String path = new RqHref.Base(req).href().path();
+        if (
+            this.removeslash
+                && !path.isEmpty()
+                && path.endsWith("/")
+                && !"/".equals(path)
+        ) {
+            path = path.substring(0, path.length() - 1);
+        }
+        final Matcher matcher = new Unchecked<>(this.pattern).value().matcher(path);
+        final Opt<Response> resp;
+        if (matcher.matches()) {
+            resp = new Opt.Single<>(
+                this.target.value().act(
+                    new RqMatcher(matcher, req)
+                )
+            );
+        } else {
+            resp = new Opt.Empty<>();
+        }
+        return resp;
+    }
+}

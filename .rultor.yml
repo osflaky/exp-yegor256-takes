@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+# SPDX-License-Identifier: MIT
+---
+# yamllint disable rule:line-length
+docker:
+  image: yegor256/java
+assets:
+  settings.xml: yegor256/home#assets/takes/settings.xml
+  pubring.gpg: yegor256/home#assets/pubring.gpg
+  secring.gpg: yegor256/home#assets/secring.gpg
+install: |
+  export LC_ALL=en_US.UTF-8
+  export LANG=en_US.UTF-8
+  export LANGUAGE=en_US.UTF-8
+merge:
+  script: |
+    pdd --source=$(pwd) --verbose --file=/dev/null
+    mvn clean install -ntp -Pqulice -Pdeep --errors --settings ../settings.xml
+    mvn clean site -Psite --errors --settings ../settings.xml
+release:
+  pre: false
+  script: |-
+    [[ "${tag}" =~ ^[0-9]+(\.[0-9]+)*$ ]] || exit -1
+    gpg --import /home/r/pubring.gpg
+    gpg --allow-secret-key-import --no-tty --batch --import /home/r/secring.gpg
+    mvn -ntp versions:set "-DnewVersion=${tag}"
+    git commit -am "${tag}"
+    export MAVEN_OPTS="--add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED"
+    mvn clean deploy -ntp -Pdeep -Ptakes -Psonatype -Pqulice -Dinvoker.skip --errors --settings ../settings.xml

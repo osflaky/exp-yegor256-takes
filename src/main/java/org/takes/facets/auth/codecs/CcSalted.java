@@ -1,0 +1,130 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.codecs;
+
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.Random;
+import lombok.EqualsAndHashCode;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.UncheckedText;
+import org.takes.facets.auth.Identity;
+
+/**
+ * Salted codec that adds random salt to prevent rainbow table attacks
+ * and adds integrity checking through checksums.
+ *
+ * <p>This codec decorator enhances security by prepending random salt
+ * bytes to the encoded data and appending a checksum. The salt makes
+ * identical inputs produce different outputs, preventing precomputed
+ * hash attacks. The checksum ensures data integrity during transmission
+ * or storage.</p>
+ *
+ * <p>The format is: [salt_size][salt_bytes][original_data][checksum]
+ * where salt_size is 1 byte, salt_bytes are random, and checksum is
+ * the sum of all salt bytes.</p>
+ *
+ * <p>Usage example:</p>
+ * <pre> {@code
+ * final Codec codec = new CcSalted(new CcPlain());
+ * final Identity identity = new Identity.Simple("urn:user:john", props);
+ * final byte[] encoded = codec.encode(identity); // salted and checksummed
+ * final Identity decoded = codec.decode(encoded); // verified and unsalted
+ * }</pre>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.1
+ */
+@EqualsAndHashCode
+public final class CcSalted implements Codec {
+
+    /**
+     * Random generator.
+     */
+    private static final Random RND = new SecureRandom();
+
+    /**
+     * Original codec.
+     */
+    private final Codec origin;
+
+    /**
+     * Ctor.
+     *
+     * @param codec Original
+     */
+    public CcSalted(final Codec codec) {
+        this.origin = codec;
+    }
+
+    @Override
+    public byte[] encode(final Identity identity) throws IOException {
+        return CcSalted.salt(this.origin.encode(identity));
+    }
+
+    @Override
+    public Identity decode(final byte[] bytes) throws IOException {
+        return this.origin.decode(CcSalted.unsalt(bytes));
+    }
+
+    private static byte[] salt(final byte[] text) {
+        final byte size = (byte) CcSalted.RND.nextInt(10);
+        final byte[] output = new byte[text.length + size + 2];
+        output[0] = size;
+        byte sum = (byte) 0;
+        for (int idx = 0; idx < size; ++idx) {
+            output[idx + 1] = (byte) CcSalted.RND.nextInt();
+            sum += output[idx + 1];
+        }
+        System.arraycopy(text, 0, output, size + 1, text.length);
+        output[output.length - 1] = sum;
+        return output;
+    }
+
+    private static byte[] unsalt(final byte[] text) {
+        if (text.length == 0) {
+            throw new DecodingException("empty input");
+        }
+        final int size = text[0];
+        if (size < 0) {
+            throw new DecodingException(
+                new UncheckedText(
+                    new FormattedText(
+                        "Length of salt %+d is negative, something is wrong",
+                        size
+                    )
+                ).asString()
+            );
+        }
+        if (text.length < size + 2) {
+            throw new DecodingException(
+                new UncheckedText(
+                    new FormattedText(
+                        "Not enough bytes for salt, length is %d while %d required",
+                        text.length, size + 2
+                    )
+                ).asString()
+            );
+        }
+        byte sum = (byte) 0;
+        for (int idx = 0; idx < size; ++idx) {
+            sum += text[idx + 1];
+        }
+        if (text[text.length - 1] != sum) {
+            throw new DecodingException(
+                new UncheckedText(
+                    new FormattedText(
+                        "Checksum %d failure, while %d expected",
+                        text[text.length - 1], sum
+                    )
+                ).asString()
+            );
+        }
+        final byte[] output = new byte[text.length - size - 2];
+        System.arraycopy(text, size + 1, output, 0, output.length);
+        return output;
+    }
+}

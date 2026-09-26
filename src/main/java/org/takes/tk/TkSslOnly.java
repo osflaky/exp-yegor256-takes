@@ -1,0 +1,55 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.tk;
+
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.Take;
+import org.takes.rq.RqHeaders;
+import org.takes.rq.RqHref;
+import org.takes.rs.RsRedirect;
+
+/**
+ * Take that redirects to HTTPS if it's HTTP.
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 1.9
+ */
+@ToString
+@EqualsAndHashCode
+public final class TkSslOnly implements Take {
+
+    /**
+     * Original take.
+     */
+    private final Take origin;
+
+    /**
+     * Ctor.
+     *
+     * @param take Original take
+     */
+    public TkSslOnly(final Take take) {
+        this.origin = take;
+    }
+
+    @Override
+    public Response act(final Request req) throws Exception {
+        final Response answer;
+        if ("https".equalsIgnoreCase(
+            new RqHeaders.Smart(req).single("x-forwarded-proto", "https")
+        )) {
+            answer = this.origin.act(req);
+        } else {
+            answer = new RsRedirect(
+                new RqHref.Base(req).href().toString().replaceAll("^http", "https")
+            );
+        }
+        return answer;
+    }
+}

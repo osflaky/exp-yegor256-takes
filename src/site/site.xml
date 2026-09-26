@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+* SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+* SPDX-License-Identifier: MIT
+-->
+<site xmlns="http://maven.apache.org/SITE/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd" name="takes">
+  <skin>
+    <groupId>com.jcabi</groupId>
+    <artifactId>jcabi-maven-skin</artifactId>
+    <version>2.0.2</version>
+  </skin>
+  <bannerLeft name="takes.org" href="https://www.takes.org/">
+    <image src="logo.svg" alt="takes.org" width="96" height="96"/>
+  </bannerLeft>
+  <custom>
+    <jcabi>
+      <favicon>https://www.takes.org/logo.png</favicon>
+    </jcabi>
+  </custom>
+  <body>
+    <breadcrumbs>
+      <item name="takes.org" href="https://www.takes.org"/>
+    </breadcrumbs>
+    <menu name="Overview">
+      <item name="Introduction" href="./index.html"/>
+      <item name="Release History" href="https://github.com/yegor256/takes/releases"/>
+    </menu>
+    <menu ref="reports"/>
+  </body>
+</site>

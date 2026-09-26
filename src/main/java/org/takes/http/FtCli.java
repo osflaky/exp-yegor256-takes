@@ -1,0 +1,121 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.http;
+
+import java.io.IOException;
+import lombok.EqualsAndHashCode;
+import org.cactoos.list.ListOf;
+import org.takes.Take;
+import org.takes.rq.RqWithHeader;
+
+/**
+ * Front with a command-line interface.
+ *
+ * <p>You must provide a {@code --port} argument. Without it, the
+ * server won't start. If you want to start the server at a random port, you
+ * should specify a file name as the value of this {@code --port} configuration
+ * option. For example:</p>
+ *
+ * <pre> new FtCli(
+ *   new TkText("hello, world!"),
+ *   "--port=/tmp/port.txt",
+ *   "--threads=1",
+ *   "--lifetime=3000"
+ * ).start(Exit.NEVER);</pre>
+ *
+ * <p>The code above will start a server and will never stop it. It will
+ * work in the foreground. The server will be started at a random TCP
+ * port and its number will be saved to the {@code /tmp/port.txt} file.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.1
+ */
+@EqualsAndHashCode
+public final class FtCli implements Front {
+
+    /**
+     * Take.
+     */
+    private final Take take;
+
+    /**
+     * Command line args.
+     */
+    private final Options options;
+
+    /**
+     * Ctor.
+     *
+     * @param tks Take
+     * @param args Arguments
+     */
+    public FtCli(final Take tks, final String... args) {
+        this(tks, new ListOf<>(args));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param tks Take
+     * @param args Arguments
+     */
+    public FtCli(final Take tks, final Iterable<String> args) {
+        this.take = tks;
+        this.options = new Options(args);
+    }
+
+    @Override
+    public void start(final Exit exit) throws IOException {
+        final Take tks;
+        if (this.options.hitRefresh()) {
+            tks = request -> this.take.act(
+                new RqWithHeader(
+                    request, "X-Takes-HitRefresh: yes"
+                )
+            );
+        } else {
+            tks = this.take;
+        }
+        final BkTimeable timeable = new BkTimeable(
+            new BkSafe(new BkBasic(tks)),
+            this.options.maxLatency()
+        );
+        timeable.setDaemon(true);
+        timeable.start();
+        final Front front = new FtBasic(
+            new BkParallel(
+                timeable,
+                this.options.threads()
+            ),
+            this.options.socket()
+        );
+        if (this.options.isDaemon()) {
+            final Thread thread = new Thread(
+                () -> {
+                    try {
+                        front.start(this.exit(exit));
+                    } catch (final IOException ex) {
+                        throw new IllegalStateException(
+                            "Failed to start the front",
+                            ex
+                        );
+                    }
+                }
+            );
+            thread.setDaemon(true);
+            thread.start();
+        } else {
+            front.start(this.exit(exit));
+        }
+    }
+
+    private Exit exit(final Exit exit) {
+        return new Exit.Or(
+            exit,
+            new Lifetime(System.currentTimeMillis(), this.options.lifetime())
+        );
+    }
+}

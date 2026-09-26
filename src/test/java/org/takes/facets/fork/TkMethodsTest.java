@@ -1,0 +1,77 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import com.jcabi.http.request.JdkRequest;
+import com.jcabi.http.response.RestResponse;
+import java.net.HttpURLConnection;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.cactoos.list.ListOf;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.takes.HttpException;
+import org.takes.Request;
+import org.takes.Take;
+import org.takes.http.FtRemote;
+import org.takes.rq.RqFake;
+import org.takes.rq.RqMethod;
+import org.takes.tk.TkEmpty;
+
+/**
+ * Test case for {@link TkMethods}.
+ *
+ * @since 0.17
+ */
+final class TkMethodsTest {
+
+    @Test
+    void acceptsCollectionOfMethodsBeforeTakeMatchingFkMethods() throws Exception {
+        final Take take = Mockito.mock(Take.class);
+        final Request req = new RqFake(RqMethod.GET);
+        new TkMethods(new ListOf<>(RqMethod.GET), take).act(req);
+        Mockito.verify(take, Mockito.times(1)).act(req);
+    }
+
+    @Test
+    void callsActOnProperMethods() throws Exception {
+        final Take take = Mockito.mock(Take.class);
+        final Request req = new RqFake(RqMethod.GET);
+        new TkMethods(take, RqMethod.GET).act(req);
+        Mockito.verify(take, Mockito.times(1)).act(req);
+    }
+
+    @Test
+    void throwsExceptionOnActinOnUnproperMethod() {
+        Assertions.assertThrows(
+            HttpException.class,
+            () -> new TkMethods(Mockito.mock(Take.class), RqMethod.POST).act(
+                new RqFake(RqMethod.GET)
+            )
+        );
+    }
+
+    @Test
+    @Tag("deep")
+    void returnsMethodIsNotAllowedForUnsupportedMethods() throws Exception {
+        final AtomicInteger status = new AtomicInteger();
+        new FtRemote(new TkMethods(new TkEmpty(), RqMethod.PUT)).exec(
+            url -> status.set(
+                new JdkRequest(url)
+                    .method(RqMethod.POST)
+                    .fetch().as(RestResponse.class)
+                    .status()
+            )
+        );
+        MatcherAssert.assertThat(
+            "TkMethods must return HTTP 405 for unsupported HTTP methods",
+            status.get(),
+            Matchers.equalTo(HttpURLConnection.HTTP_BAD_METHOD)
+        );
+    }
+}

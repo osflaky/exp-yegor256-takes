@@ -1,0 +1,173 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth;
+
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import org.cactoos.scalar.Sticky;
+import org.cactoos.scalar.Unchecked;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.UncheckedText;
+
+/**
+ * JSON Token interface for creating and encoding authentication tokens.
+ * This interface defines the contract for token generation, supporting
+ * JSON Web Token (JWT) and JSON Object Signing and Encryption (JOSE) standards.
+ *
+ * <p>All implementations of this interface must be immutable and thread-safe.</p>
+ *
+ * @since 1.4
+ */
+public interface Token {
+
+    /**
+     * Get the token as a JSON object.
+     *
+     * @return The token in JSON notation
+     */
+    JsonObject json();
+
+    /**
+     * Get the Base64-encoded representation of the token.
+     *
+     * @return The token in JSON notation, Base64-encoded
+     */
+    byte[] encoded();
+
+    /**
+     * JSON Object Signing and Encryption (JOSE) header implementation.
+     * This class creates the standard JOSE header containing algorithm
+     * and token type information for JWT signing.
+     *
+     * @since 1.4
+     */
+    final class Jose implements Token {
+
+        /**
+         * The header short for algorithm.
+         */
+        public static final String ALGORITHM = "algo";
+
+        /**
+         * The header short for token type.
+         */
+        public static final String TYPE = "type";
+
+        /**
+         * JOSE object.
+         */
+        private final Unchecked<JsonObject> joseo;
+
+        /**
+         * JSON Object Signing and Encryption Header.
+         *
+         * @param bitlength Of encryption bits
+         */
+        public Jose(final int bitlength) {
+            this.joseo = new Unchecked<>(
+                new Sticky<>(
+                    () -> Json.createObjectBuilder()
+                        .add(Token.Jose.ALGORITHM, Token.Jose.algo(bitlength))
+                        .add(Token.Jose.TYPE, "JWT")
+                        .build()
+                )
+            );
+        }
+
+        @Override
+        public JsonObject json() {
+            return this.joseo.value();
+        }
+
+        @Override
+        public byte[] encoded() {
+            return Base64.getEncoder().encode(
+                this.joseo.value().toString().getBytes(Charset.defaultCharset())
+            );
+        }
+
+        private static String algo(final int bitlength) {
+            return new UncheckedText(
+                new FormattedText("HS%s", bitlength)
+            ).asString();
+        }
+    }
+
+    /**
+     * JSON Web Token (JWT) payload implementation.
+     * This class creates JWT payloads containing subject, issued time,
+     * and expiration information for secure token-based authentication.
+     *
+     * @since 1.4
+     */
+    final class Jwt implements Token {
+
+        /**
+         * The header short for subject.
+         */
+        public static final String SUBJECT = "subj";
+
+        /**
+         * The header short for issuing time.
+         */
+        public static final String ISSUED = "date";
+
+        /**
+         * The header short for expiration.
+         */
+        public static final String EXPIRATION = "expr";
+
+        /**
+         * ISO date format for JWT timestamps.
+         */
+        private static final DateTimeFormatter ISOFORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm'Z'")
+                .withZone(ZoneOffset.UTC);
+
+        /**
+         * JWT object.
+         */
+        private final Unchecked<JsonObject> jwto;
+
+        /**
+         * JSON Web Token.
+         *
+         * @param idt Identity
+         * @param age Lifetime of token
+         */
+        public Jwt(final Identity idt, final long age) {
+            this.jwto = new Unchecked<>(
+                new Sticky<>(
+                    () -> {
+                        final Instant now = Instant.now();
+                        return Json.createObjectBuilder().add(
+                            Token.Jwt.ISSUED, Token.Jwt.ISOFORMAT.format(now)
+                        ).add(
+                            Token.Jwt.EXPIRATION,
+                            Token.Jwt.ISOFORMAT.format(now.plusSeconds(age))
+                        ).add(Token.Jwt.SUBJECT, idt.urn()).build();
+                    }
+                )
+            );
+        }
+
+        @Override
+        public JsonObject json() {
+            return this.jwto.value();
+        }
+
+        @Override
+        public byte[] encoded() {
+            return Base64.getEncoder().encode(
+                this.jwto.value().toString().getBytes(Charset.defaultCharset())
+            );
+        }
+    }
+}

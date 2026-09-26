@@ -1,0 +1,64 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import java.util.regex.Matcher;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.Take;
+
+/**
+ * Target for a {@link FkRegex} fork.
+ *
+ * <p>All implementations of this interface must be immutable and thread-safe.</p>
+ *
+ * @since 0.4
+ */
+@FunctionalInterface
+public interface TkRegex {
+
+    /**
+     * Route this request.
+     *
+     * @param req Request
+     * @return Take
+     * @throws Exception If fails
+     */
+    Response act(RqRegex req) throws Exception;
+
+    /**
+     * Fake of {@link TkRegex} as {@link org.takes.Take}.
+     *
+     * @since 0.28
+     */
+    final class Fake implements Take {
+
+        /**
+         * Original take, expecting {@link RqRegex}.
+         */
+        private final TkRegex origin;
+
+        /**
+         * Matcher.
+         */
+        private final Matcher matcher;
+
+        /**
+         * Ctor.
+         *
+         * @param rgx Original destination
+         * @param mtr Matcher
+         */
+        public Fake(final TkRegex rgx, final Matcher mtr) {
+            this.origin = rgx;
+            this.matcher = mtr;
+        }
+
+        @Override
+        public Response act(final Request req) throws Exception {
+            return this.origin.act(new RqRegex.Fake(req, this.matcher));
+        }
+    }
+}

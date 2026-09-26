@@ -1,0 +1,28 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fallback;
+
+import lombok.EqualsAndHashCode;
+import org.takes.misc.Opt;
+
+/**
+ * Empty fallback.
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.13
+ */
+@EqualsAndHashCode(callSuper = true)
+public final class FbEmpty extends FbWrap {
+
+    /**
+     * Ctor.
+     */
+    public FbEmpty() {
+        super(
+            req -> new Opt.Empty<>()
+        );
+    }
+}

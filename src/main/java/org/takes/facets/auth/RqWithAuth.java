@@ -1,0 +1,82 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth;
+
+import java.io.IOException;
+import lombok.EqualsAndHashCode;
+import org.takes.Request;
+import org.takes.rq.RqFake;
+import org.takes.rq.RqWrap;
+
+/**
+ * Request decorator that adds an authenticated identity to the request.
+ *
+ * <p>This class is particularly useful for unit testing, when you need to
+ * test a take that requires a request to contain an already
+ * authenticated user. It adds the identity information to the request headers.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.18
+ */
+@EqualsAndHashCode(callSuper = true)
+public final class RqWithAuth extends RqWrap {
+
+    /**
+     * Ctor.
+     *
+     * @param urn URN of the tester
+     * @throws IOException If fails
+     */
+    public RqWithAuth(final String urn) throws IOException {
+        this(new Identity.Simple(urn));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param identity Identity
+     * @throws IOException If fails
+     */
+    public RqWithAuth(final Identity identity) throws IOException {
+        this(identity, new RqFake());
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param urn URN of the tester
+     * @param req Request
+     * @throws IOException If fails
+     */
+    public RqWithAuth(final String urn, final Request req) throws IOException {
+        this(new Identity.Simple(urn), req);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param identity Identity
+     * @param req Request
+     * @throws IOException If fails
+     */
+    public RqWithAuth(final Identity identity, final Request req)
+        throws IOException {
+        this(identity, "TkAuth", req);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param identity Identity
+     * @param header Header name
+     * @param req Request
+     * @throws IOException If fails
+     */
+    public RqWithAuth(final Identity identity, final String header,
+        final Request req) throws IOException {
+        super(new LazyRq(identity, header, req));
+    }
+}

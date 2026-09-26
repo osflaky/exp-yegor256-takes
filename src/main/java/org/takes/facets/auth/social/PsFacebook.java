@@ -1,0 +1,206 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.social;
+
+import com.jcabi.http.request.JdkRequest;
+import com.jcabi.http.response.RestResponse;
+import com.restfb.DefaultFacebookClient;
+import com.restfb.DefaultJsonMapper;
+import com.restfb.DefaultWebRequestor;
+import com.restfb.Version;
+import com.restfb.WebRequestor;
+import com.restfb.exception.FacebookException;
+import com.restfb.types.User;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import lombok.EqualsAndHashCode;
+import org.cactoos.Text;
+import org.cactoos.text.FormattedText;
+import org.cactoos.text.Split;
+import org.cactoos.text.UncheckedText;
+import org.takes.HttpException;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.facets.auth.Identity;
+import org.takes.facets.auth.Pass;
+import org.takes.misc.Href;
+import org.takes.misc.Opt;
+import org.takes.rq.RqHref;
+
+/**
+ * A Facebook OAuth authentication handler for login callbacks.
+ *
+ * <p>This class implements the Facebook OAuth authentication flow by handling
+ * the callback from Facebook's authorization server. It exchanges the authorization
+ * code for an access token, retrieves user information, and creates an identity.
+ * The class is immutable and thread-safe.</p>
+ *
+ * @since 0.5
+ */
+@EqualsAndHashCode(of = { "app", "key" })
+public final class PsFacebook implements Pass {
+
+    /**
+     * Code.
+     */
+    private static final String CODE = "code";
+
+    /**
+     * Picture.
+     */
+    private static final String PICTURE = "picture";
+
+    /**
+     * Facebook access token URL.
+     */
+    private static final String ACCESS_TOKEN_URL =
+        "https://graph.facebook.com/oauth/access_token";
+
+    /**
+     * Request for fetching app token.
+     */
+    private final com.jcabi.http.Request request;
+
+    /**
+     * Facebook login request handler.
+     */
+    private final WebRequestor requestor;
+
+    /**
+     * App name.
+     */
+    private final String app;
+
+    /**
+     * Key.
+     */
+    private final String key;
+
+    /**
+     * Constructor with Facebook application credentials.
+     *
+     * @param fapp The Facebook application ID
+     * @param fkey The Facebook application secret key
+     */
+    public PsFacebook(final String fapp, final String fkey) {
+        this(
+            new JdkRequest(PsFacebook.ACCESS_TOKEN_URL),
+            new DefaultWebRequestor(),
+            fapp,
+            fkey
+        );
+    }
+
+    /**
+     * Constructor with custom requestor for testing purposes.
+     *
+     * @param frequest The HTTP request for obtaining access token
+     * @param frequestor The Facebook web requestor
+     * @param fapp The Facebook application ID
+     * @param fkey The Facebook application secret key
+     */
+    PsFacebook(final com.jcabi.http.Request frequest,
+        final WebRequestor frequestor, final String fapp, final String fkey) {
+        this.request = frequest;
+        this.requestor = frequestor;
+        this.app = fapp;
+        this.key = fkey;
+    }
+
+    @Override
+    public Opt<Identity> enter(final Request trequest) throws IOException {
+        final Href href = new RqHref.Base(trequest).href();
+        final Iterator<String> code = href.param(PsFacebook.CODE).iterator();
+        if (!code.hasNext()) {
+            throw new HttpException(
+                HttpURLConnection.HTTP_BAD_REQUEST,
+                "code is not provided by Facebook"
+            );
+        }
+        final User user = this.fetch(
+            this.token(href.toString(), code.next())
+        );
+        final Map<String, String> props = new HashMap<>(0);
+        props.put("name", user.getName());
+        props.put(
+            PsFacebook.PICTURE,
+            new Href("https://graph.facebook.com/")
+                .path(user.getId())
+                .path(PsFacebook.PICTURE)
+                .toString()
+        );
+        return new Opt.Single<>(
+            new Identity.Simple(
+                new UncheckedText(new FormattedText("urn:facebook:%s", user.getId())).asString(),
+                props
+            )
+        );
+    }
+
+    @Override
+    public Response exit(final Response response, final Identity identity) {
+        return response;
+    }
+
+    private User fetch(final String token) {
+        try {
+            return new DefaultFacebookClient(
+                token,
+                this.requestor,
+                new DefaultJsonMapper(),
+                Version.LATEST
+            ).fetchObject("me", User.class);
+        } catch (final FacebookException ex) {
+            throw new IllegalArgumentException(
+                "Failed to fetch object from Facebook token",
+                ex
+            );
+        }
+    }
+
+    private String token(final String home, final String code)
+        throws IOException {
+        final String response = this.request.uri().set(
+            URI.create(
+                new Href(PsFacebook.ACCESS_TOKEN_URL).with(
+                    "client_id", this.app
+                ).with("redirect_uri", home).with(
+                    "client_secret", this.key
+                ).with(PsFacebook.CODE, code).toString()
+            )
+        ).back()
+            .fetch()
+            .as(RestResponse.class)
+            .assertStatus(HttpURLConnection.HTTP_OK).body();
+        for (final Text txt : new Split(response, "&")) {
+            final String sector = new UncheckedText(txt).asString();
+            final String[] pair = sector.split("=", 2);
+            if (pair.length != 2) {
+                throw new IllegalArgumentException(
+                    new UncheckedText(
+                        new FormattedText(
+                            "Invalid response: '%s'", response
+                        )
+                    ).asString()
+                );
+            }
+            if ("access_token".equals(pair[0])) {
+                return pair[1];
+            }
+        }
+        throw new IllegalArgumentException(
+            new UncheckedText(
+                new FormattedText(
+                    "Access token not found in response: '%s'",
+                    response
+                )
+            ).asString()
+        );
+    }
+}

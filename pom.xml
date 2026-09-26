@@ -1,0 +1,878 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+* SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+* SPDX-License-Identifier: MIT
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.jcabi</groupId>
+    <artifactId>parent</artifactId>
+    <version>0.73.4</version>
+  </parent>
+  <groupId>org.takes</groupId>
+  <artifactId>takes</artifactId>
+  <version>2.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>takes</name>
+  <description>True Object-Oriented and Immutable Java Web Framework</description>
+  <url>https://github.com/yegor256/takes</url>
+  <inceptionYear>2015</inceptionYear>
+  <organization>
+    <name>Take</name>
+    <url>https://github.com/yegor256/takes</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>https://www.takes.org/LICENSE.txt</url>
+      <distribution>site</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>1</id>
+      <name>Yegor Bugayenko</name>
+      <email>yegor256@gmail.com</email>
+      <organization>Zerocracy</organization>
+      <organizationUrl>https://www.zerocracy.com</organizationUrl>
+      <roles>
+        <role>Architect</role>
+        <role>Developer</role>
+      </roles>
+      <timezone>+3</timezone>
+    </developer>
+    <developer>
+      <id>2</id>
+      <name>Olivier B. OURA</name>
+      <email>baudoliver7@gmail.com</email>
+      <organization>Baudoliver7.com</organization>
+      <organizationUrl>https://www.baudoliver7.com</organizationUrl>
+      <roles>
+        <role>Developer</role>
+      </roles>
+      <timezone>+0</timezone>
+    </developer>
+  </developers>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/yegor256/takes/issues</url>
+  </issueManagement>
+  <scm>
+    <connection>scm:git:git@github.com:yegor256/takes.git</connection>
+    <developerConnection>scm:git:git@github.com:yegor256/takes.git
+    </developerConnection>
+    <url>https://github.com/yegor256/takes</url>
+  </scm>
+  <ciManagement>
+    <system>rultor</system>
+    <url>https://www.rultor.com/s/takes</url>
+  </ciManagement>
+  <distributionManagement>
+    <site>
+      <id>github-pages</id>
+      <url>https://github.com/yegor256/takes</url>
+    </site>
+  </distributionManagement>
+  <properties>
+    <timestamp>${maven.build.timestamp}</timestamp>
+    <jdk.version>1.8</jdk.version>
+    <argLine/>
+    <excludedGroups>deep</excludedGroups>
+  </properties>
+  <dependencies>
+    <!--
+    Pay attention that we are NOT allowed to use ANY third-party
+    dependencies here, unless they are in PROVIDED, TEST of RUNTIME
+    scope. The project must be self-sufficient and work in a single
+    JAR dependency.
+    -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.48</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <version>2.50.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.cactoos</groupId>
+      <artifactId>cactoos</artifactId>
+      <version>0.62.0</version>
+    </dependency>
+    <dependency>
+      <groupId>xml-apis</groupId>
+      <artifactId>xml-apis</artifactId>
+      <version>1.0.b2</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.json</groupId>
+      <artifactId>jakarta.json-api</artifactId>
+      <version>2.1.3</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <version>6.1.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
+      <version>4.0.5</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.jcabi</groupId>
+      <artifactId>jcabi-http</artifactId>
+      <version>2.1.0</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.jcabi</groupId>
+      <artifactId>jcabi-xml</artifactId>
+      <version>0.37.1</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.velocity</groupId>
+      <artifactId>velocity-engine-core</artifactId>
+      <version>2.4.1</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.jcabi.incubator</groupId>
+      <artifactId>xembly</artifactId>
+      <version>0.32.2</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.restfb</groupId>
+      <artifactId>restfb</artifactId>
+      <version>2026.9.0</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>3.0</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-http-servlet-server</artifactId>
+      <version>5.0.2</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.glassfish.grizzly</groupId>
+          <artifactId>grizzly-npn-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.parsson</groupId>
+      <artifactId>jakarta.json</artifactId>
+      <version>1.1.9</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.22.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.llorllale</groupId>
+      <artifactId>cactoos-matchers</artifactId>
+      <version>0.25</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.jcabi</groupId>
+      <artifactId>jcabi-matchers</artifactId>
+      <version>1.9.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.jcabi</groupId>
+      <artifactId>jcabi-log</artifactId>
+      <version>0.24.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+      <version>4.0.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-client</artifactId>
+      <version>4.0.2</version>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>4.0.2</version>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.saxon</groupId>
+      <artifactId>Saxon-HE</artifactId>
+      <version>13.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.el</groupId>
+      <artifactId>javax.el-api</artifactId>
+      <version>3.0.1-b06</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.20</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-reload4j</artifactId>
+      <version>2.0.20</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.reload4j</groupId>
+          <artifactId>reload4j</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>5.23.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.23.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+      <scope>test</scope>
+      <version>1.15.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+      <version>3.0.1u2</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>net.jcip</groupId>
+          <artifactId>jcip-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+  <build>
+    <testResources>
+      <testResource>
+        <filtering>true</filtering>
+        <directory>${project.basedir}/src/test/resources</directory>
+        <excludes>
+          <exclude>org/takes/http/keystore</exclude>
+        </excludes>
+      </testResource>
+      <!--
+      This is not a typo. We need to copy resources twice, one
+      time with filtering, second time without. Why? I don't know. But
+      if you remove one of these blocks, the build will fail. If you have
+      time and energy, try to figure out what's going on here and either
+      remove one of these blocks or improve this XML comment and explain
+      properly why we need this configuration.
+      -->
+      <testResource>
+        <filtering>false</filtering>
+        <directory>${project.basedir}/src/test/resources</directory>
+        <includes>
+          <include>org/takes/http/keystore</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <groupId>org.revapi</groupId>
+        <artifactId>revapi-maven-plugin</artifactId>
+        <version>0.15.1</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.revapi</groupId>
+            <artifactId>revapi-java</artifactId>
+            <version>0.28.4</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <analysisConfiguration>
+            <revapi.differences>
+              <differences>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.facets.auth.PsBasic.Default</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.facets.auth.PsBasic.Empty</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.facets.auth.PsBasic.Fake</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.facets.auth.PsByFlag.Pair</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.facets.fork.am.AmVersion.VmGreater</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.rs.RsVelocity.Pair</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.rs.RsWithType.Html</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.rs.RsWithType.Json</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.rs.RsWithType.Text</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class org.takes.rs.RsWithType.Xml</old>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.auth.PsByFlag::&lt;init&gt;(===org.takes.facets.auth.PsByFlag.Pair[]===)</old>
+                  <new>parameter void org.takes.facets.auth.PsByFlag::&lt;init&gt;(===org.takes.facets.auth.PsByFlagPair[]===)</new>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.auth.PsByFlag::&lt;init&gt;(java.lang.String, ===org.takes.facets.auth.PsByFlag.Pair[]===)</old>
+                  <new>parameter void org.takes.facets.auth.PsByFlag::&lt;init&gt;(java.lang.String, ===org.takes.facets.auth.PsByFlagPair[]===)</new>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.rs.RsVelocity::&lt;init&gt;(java.io.InputStream, ===org.takes.rs.RsVelocity.Pair[]===)</old>
+                  <new>parameter void org.takes.rs.RsVelocity::&lt;init&gt;(java.io.InputStream, ===org.takes.rs.RsVelocityPair[]===)</new>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.rs.RsVelocity::&lt;init&gt;(java.lang.CharSequence, ===org.takes.rs.RsVelocity.Pair[]===)</old>
+                  <new>parameter void org.takes.rs.RsVelocity::&lt;init&gt;(java.lang.CharSequence, ===org.takes.rs.RsVelocityPair[]===)</new>
+                  <justification>Moved into its own file, because qulice 0.31.1 ProhibitStaticNestedClassesCheck does not allow static nested classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.varargOverloadsOnlyDifferInVarargParameter</code>
+                  <old>method void org.takes.rs.xe.XeDirectives::&lt;init&gt;(java.lang.String[])</old>
+                  <new>method void org.takes.rs.xe.XeDirectives::&lt;init&gt;(java.lang.String[])</new>
+                  <justification>Pre-existing API pattern for convenient construction</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.varargOverloadsOnlyDifferInVarargParameter</code>
+                  <old>method void org.takes.rs.xe.XeDirectives::&lt;init&gt;(org.xembly.Directive[])</old>
+                  <new>method void org.takes.rs.xe.XeDirectives::&lt;init&gt;(org.xembly.Directive[])</new>
+                  <justification>Pre-existing API pattern for convenient construction</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.misc.Expires.Date::&lt;init&gt;(java.lang.String, java.util.Locale, ===java.util.Date===)</old>
+                  <new>parameter void org.takes.misc.Expires.Date::&lt;init&gt;(java.lang.String, java.util.Locale, ===java.time.Instant===)</new>
+                  <justification>Migrating from legacy java.util.Date to java.time.Instant</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.fork.FkHitRefresh::&lt;init&gt;(java.io.File, java.lang.String, org.takes.Take)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.split call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.fork.FkParams::&lt;init&gt;(java.lang.String, java.lang.String, org.takes.Take)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Pattern.compile call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.fork.RqRegex.Fake::&lt;init&gt;(java.lang.String, java.lang.CharSequence)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Pattern.compile call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.fork.RqRegex.Fake::&lt;init&gt;(org.takes.Request, java.lang.String, java.lang.CharSequence)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Pattern.compile call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.fork.TkRegex.Fake::&lt;init&gt;(org.takes.facets.fork.TkRegex, java.lang.String, java.lang.CharSequence)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Pattern.compile call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.hamcrest.HmBody&lt;T extends org.takes.Body&gt;::&lt;init&gt;(java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.getBytes call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.hamcrest.HmBody&lt;T extends org.takes.Body&gt;::&lt;init&gt;(java.lang.String, java.nio.charset.Charset)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.getBytes call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.hamcrest.HmHeader&lt;T extends org.takes.Head&gt;::&lt;init&gt;(java.lang.String, java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Matchers.hasItems call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.auth.PsByFlag.Pair::&lt;init&gt;(java.lang.String, org.takes.facets.auth.Pass)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Pattern.compile call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.auth.codecs.CcXor::&lt;init&gt;(org.takes.facets.auth.codecs.Codec, java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden BytesOf().asBytes() call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.tk.TkClasspath::&lt;init&gt;(java.lang.Class&lt;?&gt;)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.format/getName/replace calls in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.tk.TkProxy::&lt;init&gt;(java.lang.String, java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden URI.create call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.tk.TkProxy::&lt;init&gt;(java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden URI.create call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.tk.TkSlf4j::&lt;init&gt;(org.takes.Take, java.lang.Class&lt;?&gt;)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden Class.getCanonicalName call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.auth.signatures.SiHmac::&lt;init&gt;(java.lang.String)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.getBytes call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.facets.auth.signatures.SiHmac::&lt;init&gt;(java.lang.String, int)</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden String.getBytes call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.http.FtSecure::&lt;init&gt;(org.takes.Take, int) throws java.io.IOException</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (chained delegation through removed (Back,int) ctor)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.http.FtSecure::&lt;init&gt;(org.takes.Take) throws java.io.IOException</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (chained delegation through removed (Back,int) ctor)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.http.FtSecure::&lt;init&gt;(org.takes.http.Back, int) throws java.io.IOException</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden SSLServerSocketFactory.getDefault().createServerSocket call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void org.takes.rs.RsVelocity::&lt;init&gt;(java.net.URL, org.takes.rs.RsVelocity.Pair[]) throws java.io.IOException</old>
+                  <justification>Removed to comply with qulice ConstructorsCodeFreeCheck (forbidden URL.openStream call in delegation)</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.auth.PsToken::&lt;init&gt;(===java.lang.String===)</old>
+                  <new>parameter void org.takes.facets.auth.PsToken::&lt;init&gt;(===byte[]===)</new>
+                  <justification>Changed key parameter from String to byte[] to satisfy qulice ConstructorsCodeFreeCheck</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.auth.PsToken::&lt;init&gt;(===java.lang.String===, long)</old>
+                  <new>parameter void org.takes.facets.auth.PsToken::&lt;init&gt;(===byte[]===, long)</new>
+                  <justification>Changed key parameter from String to byte[] to satisfy qulice ConstructorsCodeFreeCheck</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, ===org.takes.misc.Expires.Date===) throws java.io.UnsupportedEncodingException</old>
+                  <new>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, ===org.takes.misc.Expires===) throws java.io.UnsupportedEncodingException</new>
+                  <justification>Widened type from Expires.Date to Expires to support lazy expiration</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.Throwable, ===org.takes.misc.Expires.Date===) throws java.io.UnsupportedEncodingException</old>
+                  <new>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.Throwable, ===org.takes.misc.Expires===) throws java.io.UnsupportedEncodingException</new>
+                  <justification>Widened type from Expires.Date to Expires to support lazy expiration</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, java.util.logging.Level, ===org.takes.misc.Expires.Date===) throws java.io.UnsupportedEncodingException</old>
+                  <new>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, java.util.logging.Level, ===org.takes.misc.Expires===) throws java.io.UnsupportedEncodingException</new>
+                  <justification>Widened type from Expires.Date to Expires to support lazy expiration</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.Throwable, java.util.logging.Level, ===org.takes.misc.Expires.Date===) throws java.io.UnsupportedEncodingException</old>
+                  <new>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.Throwable, java.util.logging.Level, ===org.takes.misc.Expires===) throws java.io.UnsupportedEncodingException</new>
+                  <justification>Widened type from Expires.Date to Expires to support lazy expiration</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, java.util.logging.Level, java.lang.String, ===org.takes.misc.Expires.Date===) throws java.io.UnsupportedEncodingException</old>
+                  <new>parameter void org.takes.facets.flash.RsFlash::&lt;init&gt;(java.lang.CharSequence, java.util.logging.Level, java.lang.String, ===org.takes.misc.Expires===) throws java.io.UnsupportedEncodingException</new>
+                  <justification>Widened type from Expires.Date to Expires to support lazy expiration</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter void org.takes.tk.TkWithHeader::&lt;init&gt;(org.takes.Take, ===java.lang.String===)</old>
+                  <new>parameter void org.takes.tk.TkWithHeader::&lt;init&gt;(org.takes.Take, ===java.lang.CharSequence===)</new>
+                  <justification>Widened type from String to CharSequence to satisfy qulice ConstructorsOrderCheck</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <old>method java.lang.String java.lang.Throwable::getMessage() @ org.takes.facets.forward.RsForward</old>
+                  <new>method java.lang.String org.takes.facets.forward.RsForward::getMessage()</new>
+                  <justification>Override of inherited Throwable.getMessage() made final to satisfy DesignForExtensionCheck</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method java.lang.String org.takes.servlet.HttpServletRequestFake::getRealPath(java.lang.String)</old>
+                  <new>method java.lang.String org.takes.servlet.HttpServletRequestFake::getRealPath(java.lang.String)</new>
+                  <justification>Added ErrorProne DoNotCall annotation to satisfy DoNotCallSuggester check on a method that always throws</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method boolean org.takes.servlet.HttpServletRequestFake::isRequestedSessionIdFromUrl()</old>
+                  <new>method boolean org.takes.servlet.HttpServletRequestFake::isRequestedSessionIdFromUrl()</new>
+                  <justification>Added ErrorProne DoNotCall annotation to satisfy DoNotCallSuggester check on a method that always throws</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method java.lang.String org.takes.servlet.HttpServletResponseFake::encodeRedirectUrl(java.lang.String)</old>
+                  <new>method java.lang.String org.takes.servlet.HttpServletResponseFake::encodeRedirectUrl(java.lang.String)</new>
+                  <justification>Added ErrorProne DoNotCall annotation to satisfy DoNotCallSuggester check on a method that always throws</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method java.lang.String org.takes.servlet.HttpServletResponseFake::encodeUrl(java.lang.String)</old>
+                  <new>method java.lang.String org.takes.servlet.HttpServletResponseFake::encodeUrl(java.lang.String)</new>
+                  <justification>Added ErrorProne DoNotCall annotation to satisfy DoNotCallSuggester check on a method that always throws</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method void org.takes.servlet.HttpServletResponseFake::setStatus(int, java.lang.String)</old>
+                  <new>method void org.takes.servlet.HttpServletResponseFake::setStatus(int, java.lang.String)</new>
+                  <justification>Added ErrorProne DoNotCall annotation to satisfy DoNotCallSuggester check on a method that always throws</justification>
+                </item>
+              </differences>
+            </revapi.differences>
+          </analysisConfiguration>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptorRefs>
+                <descriptorRef>jar-with-dependencies</descriptorRef>
+              </descriptorRefs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>2.7.1</version>
+        <executions>
+          <execution>
+            <id>check-licenses</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check-file-header</goal>
+            </goals>
+            <configuration>
+              <licenseName>mit</licenseName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludedGroups>org.takes.misc.PerformanceTests,${excludedGroups}</excludedGroups>
+          <argLine>@{argLine} -Dfile.encoding=UTF-8 -Djava.awt.headless=true -Duser.language=en -Duser.country=US</argLine>
+          <systemPropertyVariables>
+            <javax.net.ssl.keyStore>${project.build.directory}/test-classes/org/takes/http/keystore</javax.net.ssl.keyStore>
+            <javax.net.ssl.keyStorePassword>abc123
+            </javax.net.ssl.keyStorePassword>
+            <javax.net.ssl.trustStore>${project.build.directory}/test-classes/org/takes/http/keystore</javax.net.ssl.trustStore>
+            <javax.net.ssl.trustStorePassword>abc123</javax.net.ssl.trustStorePassword>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>post-site</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/www.takes.org</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>${jdk.version}</source>
+          <target>${jdk.version}</target>
+          <useIncrementalCompilation>false</useIncrementalCompilation>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.48</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>performance</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>3.6.0</version>
+            <configuration>
+              <groups>org.takes.misc.PerformanceTests</groups>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>qulice</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.qulice</groupId>
+            <artifactId>qulice-maven-plugin</artifactId>
+            <version>0.36.0</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>site</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <artifactId>maven-invoker-plugin</artifactId>
+              <configuration>
+                <skipInvocation>true</skipInvocation>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+    <profile>
+      <id>sonar</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>5.8.0.7211</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>sonar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!-- https://stackoverflow.com/questions/52502189/java-11-package-javax-xml-bind-does-not-exist -->
+      <id>java-xml-bind</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+          <version>4.0.5</version>
+        </dependency>
+        <dependency>
+          <groupId>com.sun.xml.bind</groupId>
+          <artifactId>jaxb-core</artifactId>
+          <version>4.0.9</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.sun.xml.bind</groupId>
+          <artifactId>jaxb-impl</artifactId>
+          <version>4.0.9</version>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>deep</id>
+      <properties>
+        <excludedGroups/>
+      </properties>
+    </profile>
+  </profiles>
+</project>

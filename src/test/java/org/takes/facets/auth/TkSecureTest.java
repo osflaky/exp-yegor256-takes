@@ -1,0 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth;
+
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.takes.facets.auth.codecs.CcPlain;
+import org.takes.facets.forward.RsForward;
+import org.takes.rq.RqFake;
+import org.takes.rq.RqWithHeader;
+import org.takes.rs.RsEmpty;
+
+/**
+ * Test case for {@link TkSecure}.
+ *
+ * @since 0.11
+ */
+final class TkSecureTest {
+
+    @Test
+    void failsOnAnonymous() {
+        Assertions.assertEquals(
+            HttpURLConnection.HTTP_UNAUTHORIZED,
+            Assertions.assertThrows(
+                RsForward.class,
+                () -> new TkSecure(request -> new RsEmpty()).act(new RqFake())
+            ).code(),
+            "Anonymous access must result in HTTP 401 Unauthorized"
+        );
+    }
+
+    @Test
+    void passesOnRegisteredUser() throws Exception {
+        MatcherAssert.assertThat(
+            "Authenticated user must be allowed access to secure resource",
+            new TkSecure(
+                request -> new RsEmpty()
+            ).act(
+                new RqWithHeader(
+                    new RqFake(),
+                    TkAuth.class.getSimpleName(),
+                    new String(
+                        new CcPlain().encode(new Identity.Simple("urn:test:2")),
+                        StandardCharsets.UTF_8
+                    )
+                )
+            ),
+            Matchers.instanceOf(RsEmpty.class)
+        );
+    }
+}

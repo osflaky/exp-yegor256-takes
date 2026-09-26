@@ -1,0 +1,92 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.rs;
+
+import jakarta.json.Json;
+import jakarta.json.JsonException;
+import jakarta.json.JsonWriter;
+import jakarta.json.stream.JsonGenerator;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.takes.Response;
+
+/**
+ * Response decorator that formats JSON content with proper indentation.
+ *
+ * <p>This decorator transforms JSON response bodies to include proper
+ * indentation and formatting for better readability. It parses the JSON
+ * content and reformats it using Jakarta JSON API with pretty printing
+ * enabled. The transformation is cached to avoid repeated processing.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 1.0
+ */
+@ToString(of = "origin")
+@EqualsAndHashCode
+public final class RsPrettyJson implements Response {
+
+    /**
+     * Original response.
+     */
+    private final Response origin;
+
+    /**
+     * Response with properly transformed body.
+     */
+    private final List<Response> transformed;
+
+    /**
+     * Ctor.
+     *
+     * @param res Original response
+     */
+    public RsPrettyJson(final Response res) {
+        this.transformed = new CopyOnWriteArrayList<>();
+        this.origin = res;
+    }
+
+    @Override
+    public Iterable<String> head() throws IOException {
+        return this.make().head();
+    }
+
+    @Override
+    public InputStream body() throws IOException {
+        return this.make().body();
+    }
+
+    private Response make() throws IOException {
+        if (this.transformed.isEmpty()) {
+            this.transformed.add(
+                new RsWithBody(
+                    this.origin,
+                    RsPrettyJson.transform(this.origin.body())
+                )
+            );
+        }
+        return this.transformed.get(0);
+    }
+
+    private static byte[] transform(final InputStream body) throws IOException {
+        final ByteArrayOutputStream res = new ByteArrayOutputStream();
+        try (
+            JsonWriter wrt = Json.createWriterFactory(
+                Collections.singletonMap(JsonGenerator.PRETTY_PRINTING, true)
+            ).createWriter(res)
+        ) {
+            wrt.write(Json.createReader(body).readValue());
+        } catch (final JsonException ex) {
+            throw new IOException(ex);
+        }
+        return res.toByteArray();
+    }
+}

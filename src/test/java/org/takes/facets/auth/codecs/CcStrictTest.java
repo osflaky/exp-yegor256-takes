@@ -1,0 +1,82 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.codecs;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.takes.facets.auth.Identity;
+
+/**
+ * Test case for {@link CcStrict}.
+ *
+ * @since 0.11.2
+ */
+final class CcStrictTest {
+
+    @Test
+    void blocksEmptyUrn() {
+        Assertions.assertThrows(
+            DecodingException.class,
+            () -> new CcStrict(new CcPlain()).encode(new Identity.Simple(""))
+        );
+    }
+
+    @Test
+    void blocksInvalidUrn() {
+        Assertions.assertThrows(
+            DecodingException.class,
+            () -> new CcStrict(new CcPlain()).decode(
+                "u%3Atest%3A9".getBytes(StandardCharsets.UTF_8)
+            )
+        );
+    }
+
+    @Test
+    void canDecodeAnonymousIdentity() throws Exception {
+        final Codec codec = Mockito.mock(Codec.class);
+        Mockito.when(codec.decode(Mockito.any())).thenReturn(
+            Identity.ANONYMOUS
+        );
+        MatcherAssert.assertThat(
+            "Strict codec must allow decoding anonymous identity",
+            new CcStrict(codec).decode(new byte[0]),
+            CoreMatchers.equalTo(Identity.ANONYMOUS)
+        );
+    }
+
+    @Test
+    void passesSimpleValidUrn() throws IOException {
+        MatcherAssert.assertThat(
+            "Valid URN must be encoded correctly by strict codec",
+            new String(
+                new CcStrict(new CcPlain()).encode(
+                    new Identity.Simple("urn:test:1")
+                ),
+                StandardCharsets.UTF_8
+            ),
+            Matchers.equalTo("urn%3Atest%3A1")
+        );
+    }
+
+    @Test
+    void passesComplexValidUrn() throws IOException {
+        MatcherAssert.assertThat(
+            "Complex valid URN must be encoded correctly by strict codec",
+            new String(
+                new CcStrict(new CcPlain()).encode(
+                    new Identity.Simple("urn:test-domain-org:valid:1")
+                ),
+                StandardCharsets.UTF_8
+            ),
+            Matchers.equalTo("urn%3Atest-domain-org%3Avalid%3A1")
+        );
+    }
+}

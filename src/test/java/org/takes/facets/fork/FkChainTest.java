@@ -1,0 +1,58 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import org.cactoos.text.Joined;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Test;
+import org.llorllale.cactoos.matchers.IsText;
+import org.takes.rq.RqFake;
+import org.takes.rs.RsPrint;
+
+/**
+ * Test case for {@link FkChain}.
+ *
+ * @since 0.33
+ */
+final class FkChainTest {
+
+    @Test
+    void gracefullyHandlesNoForkMatching() throws Exception {
+        MatcherAssert.assertThat(
+            "FkChain must return false when no fork matches the request",
+            new FkChain(
+                new FkRegex("/doyoumatch?", "Hello. It's me."),
+                new FkRegex("/plzmatch!", "I am your father")
+            ).route(new RqFake("POST", "/idontmatch")).has(),
+            Matchers.equalTo(false)
+        );
+    }
+
+    @Test
+    void dispatchesByRegularExpression() throws Exception {
+        final String body = "hello test!";
+        MatcherAssert.assertThat(
+            "FkChain must dispatch to matching regex fork and return correct response",
+            new RsPrint(
+                new FkChain(
+                    new FkRegex("/g[a-z]{2}", ""),
+                    new FkRegex("/h[a-z]{2}", body),
+                    new FkRegex("/i[a-z]{2}", "")
+                ).route(new RqFake("GET", "/hey?yu")).get()
+            ),
+            new IsText(
+                new Joined(
+                    String.valueOf((char) 13) + (char) 10,
+                    "HTTP/1.1 200 OK",
+                    String.format("Content-Length: %s", body.length()),
+                    "Content-Type: text/plain",
+                    "",
+                    body
+                )
+            )
+        );
+    }
+}

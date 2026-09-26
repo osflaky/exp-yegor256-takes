@@ -1,0 +1,39 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.rq;
+
+import java.io.BufferedInputStream;
+import lombok.EqualsAndHashCode;
+import org.takes.Request;
+
+/**
+ * Request decorator that wraps the body stream with buffering capability.
+ *
+ * <p>This decorator wraps the request body's input stream with a
+ * BufferedInputStream, which can improve performance when the body
+ * is read in small chunks by providing internal buffering.</p>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @since 0.16
+ */
+@EqualsAndHashCode(callSuper = true)
+@SuppressWarnings("PMD.CloseInlineResourceRule")
+public final class RqBuffered extends RqWrap {
+
+    /**
+     * Ctor.
+     *
+     * @param req Original request
+     */
+    public RqBuffered(final Request req) {
+        super(
+            new RequestOf(
+                req,
+                () -> new BufferedInputStream(req.body())
+            )
+        );
+    }
+}

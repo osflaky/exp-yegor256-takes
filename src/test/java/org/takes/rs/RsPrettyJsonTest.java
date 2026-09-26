@@ -1,0 +1,133 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.rs;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.hamcrest.core.IsEqual;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Test case for {@link RsPrettyJson}.
+ *
+ * @since 1.0
+ */
+final class RsPrettyJsonTest {
+
+    /**
+     * Line feed character.
+     */
+    private static final String LF = String.valueOf((char) 10);
+
+    @Test
+    void formatsJsonBody() throws Exception {
+        MatcherAssert.assertThat(
+            "Pretty JSON formatter must format JSON with proper indentation",
+            new RsBodyPrint(
+                new RsPrettyJson(
+                    new RsWithBody("{\"widget\": {\"debug\": \"on\" }}")
+                )
+            ).asString(),
+            Matchers.is(
+                String.format(
+                    "{%1$s    \"widget\": {%1$s        \"debug\": \"on\"%1$s    }%1$s}",
+                    RsPrettyJsonTest.LF
+                )
+            )
+        );
+    }
+
+    @Test
+    void formatsJsonArrayBody() throws Exception {
+        MatcherAssert.assertThat(
+            "Pretty JSON formatter must format a JSON array too",
+            new RsBodyPrint(
+                new RsPrettyJson(
+                    new RsWithBody("[{\"a\": 1 },2]")
+                )
+            ).asString(),
+            Matchers.is(
+                String.format(
+                    "[%1$s    {%1$s        \"a\": 1%1$s    },%1$s    2%1$s]",
+                    RsPrettyJsonTest.LF
+                )
+            )
+        );
+    }
+
+    @Test
+    void formatsJsonScalarBody() throws Exception {
+        MatcherAssert.assertThat(
+            "Pretty JSON formatter must format a bare JSON value too",
+            new RsBodyPrint(
+                new RsPrettyJson(
+                    new RsWithBody("42")
+                )
+            ).asString(),
+            Matchers.is("42")
+        );
+    }
+
+    @Test
+    void rejectsNonJsonBody() {
+        Assertions.assertThrows(
+            IOException.class,
+            () -> new RsBodyPrint(new RsPrettyJson(new RsWithBody("foo"))).asString()
+        );
+    }
+
+    @Test
+    void reportsCorrectContentLength() throws Exception {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (Writer w = new OutputStreamWriter(baos, StandardCharsets.UTF_8)) {
+            w.write(
+                new RsBodyPrint(
+                    new RsWithBody(
+                        String.format(
+                            "{%1$s    \"test\": {%1$s        \"test\": \"test\"%1$s    }%1$s}",
+                            RsPrettyJsonTest.LF
+                        )
+                    )
+                ).asString()
+            );
+        }
+        MatcherAssert.assertThat(
+            "Pretty JSON response must report correct content length",
+            new RsHeadPrint(
+                new RsPrettyJson(
+                    new RsWithBody("{\"test\": {\"test\": \"test\" }}")
+                )
+            ).asString(),
+            Matchers.containsString(
+                String.format(
+                    "Content-Length: %d",
+                    baos.toByteArray().length
+                )
+            )
+        );
+    }
+
+    @Test
+    void mustEvaluateTrueEquality() {
+        final String body = "{\"person\":{\"name\":\"John\"}}";
+        MatcherAssert.assertThat(
+            "Must evaluate true equality",
+            new RsPrettyJson(
+                new RsWithBody(body)
+            ),
+            new IsEqual<>(
+                new RsPrettyJson(
+                    new RsWithBody(body)
+                )
+            )
+        );
+    }
+}

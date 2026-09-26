@@ -1,0 +1,88 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import java.util.Collection;
+import lombok.EqualsAndHashCode;
+import org.cactoos.list.ListOf;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.Take;
+import org.takes.misc.Opt;
+import org.takes.rq.RqMethod;
+import org.takes.tk.TkFixed;
+
+/**
+ * Fork by method matching.
+ *
+ * <p>Use this class in combination with {@link TkFork},
+ * for example:</p>
+ *
+ * <pre> Take take = new TkFork(
+ *   new FkMethods("GET", new TkLoad()),
+ *   new FkMethods("PUT", new TkSave())
+ * );</pre>
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @see TkFork
+ * @since 0.4
+ */
+@EqualsAndHashCode
+public final class FkMethods implements Fork {
+
+    /**
+     * Methods to match.
+     */
+    private final Collection<String> methods;
+
+    /**
+     * Target.
+     */
+    private final Take take;
+
+    /**
+     * Ctor.
+     *
+     * @param mtd Method
+     * @param rsp Response
+     * @since 0.22
+     */
+    public FkMethods(final String mtd, final Response rsp) {
+        this(mtd, new TkFixed(rsp));
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param mtd Method
+     * @param that Take
+     */
+    public FkMethods(final String mtd, final Take that) {
+        this(new ListOf<>(mtd), that);
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param mtds Methods
+     * @param that Take
+     */
+    public FkMethods(final Collection<String> mtds, final Take that) {
+        this.methods = new ListOf<>(mtds);
+        this.take = that;
+    }
+
+    @Override
+    public Opt<Response> route(final Request req) throws Exception {
+        final Opt<Response> resp;
+        if (this.methods.contains(new RqMethod.Base(req).method())) {
+            resp = new Opt.Single<>(this.take.act(req));
+        } else {
+            resp = new Opt.Empty<>();
+        }
+        return resp;
+    }
+}

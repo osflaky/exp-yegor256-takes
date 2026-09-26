@@ -1,0 +1,131 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.auth.social;
+
+import jakarta.json.Json;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.takes.Request;
+import org.takes.Response;
+import org.takes.Take;
+import org.takes.facets.auth.Identity;
+import org.takes.facets.fork.FkRegex;
+import org.takes.facets.fork.TkFork;
+import org.takes.http.FtRemote;
+import org.takes.rq.RqFake;
+import org.takes.rq.RqGreedy;
+import org.takes.rq.form.RqFormBase;
+import org.takes.rq.form.RqFormSmart;
+import org.takes.rs.RsJson;
+import org.takes.rs.xe.RsXembly;
+import org.takes.rs.xe.XeDirectives;
+import org.xembly.Directives;
+
+/**
+ * Test case for {@link org.takes.rq.RqMethod}.
+ *
+ * @since 0.15.2
+ */
+final class PsGithubTest {
+
+    @Test
+    @Tag("deep")
+    void failsOnNoAccessToken() {
+        Assertions.assertThrows(
+            AssertionError.class,
+            () -> this.performLogin(PsGithubTest.directiveWithoutAccessToken())
+        );
+    }
+
+    @Test
+    @Tag("deep")
+    void canLogin() throws Exception {
+        MatcherAssert.assertThat(
+            "GitHub identity URN must match expected format with user ID",
+            this.performLogin(
+                PsGithubTest.directiveWithoutAccessToken()
+                    .add("access_token")
+                    .set("GitHubToken")
+            ).urn(),
+            Matchers.equalTo("urn:github:1")
+        );
+    }
+
+    private Identity performLogin(final Directives directive) throws Exception {
+        final String app = "app";
+        final String key = "key";
+        final Take take = new TkFork(
+            new FkRegex(
+                "/login/oauth/access_token",
+                (Take) req -> {
+                    final Request greq = new RqGreedy(req);
+                    final String code = "code";
+                    PsGithubTest.assertParam(greq, code, code);
+                    PsGithubTest.assertParam(greq, "client_id", app);
+                    PsGithubTest.assertParam(greq, "client_secret", key);
+                    return new RsXembly(
+                        new XeDirectives(directive.toString())
+                    );
+                }
+            ),
+            new FkRegex(
+                "/user",
+                new PsGithubTest.TkFakeLogin()
+            )
+        );
+        final AtomicReference<Identity> identity = new AtomicReference<>();
+        new FtRemote(take).exec(
+            home -> identity.set(
+                new PsGithub(
+                    app,
+                    key,
+                    home.toString(),
+                    home.toString()
+                ).enter(new RqFake("GET", "?code=code")).get()
+            )
+        );
+        return identity.get();
+    }
+
+    private static Directives directiveWithoutAccessToken() {
+        return new Directives().add("OAuth")
+            .add("token_type").set("bearer").up()
+            .add("scope").set("repo,gist").up();
+    }
+
+    private static void assertParam(final Request req,
+        final CharSequence param, final String value) throws IOException {
+        MatcherAssert.assertThat(
+            "GitHub OAuth request parameter must match expected value",
+            new RqFormSmart(new RqFormBase(req)).single(param),
+            Matchers.equalTo(value)
+        );
+    }
+
+    /**
+     * An inner class for the Take implementation testing.
+     *
+     * @since 0.15.2
+     */
+    private static final class TkFakeLogin implements Take {
+
+        @Override
+        public Response act(final Request req) throws IOException {
+            return new RsJson(
+                Json.createObjectBuilder().add(
+                    "login", "octocat"
+                ).add("id", 1).add(
+                    "avatar_url",
+                    "https://github.com/img/octocat.gif"
+                ).build()
+            );
+        }
+    }
+}

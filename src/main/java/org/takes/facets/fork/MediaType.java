@@ -1,0 +1,155 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.facets.fork;
+
+import java.util.List;
+import java.util.regex.Pattern;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.cactoos.Text;
+import org.cactoos.list.ListOf;
+import org.cactoos.scalar.Sticky;
+import org.cactoos.scalar.Unchecked;
+import org.cactoos.text.Lowered;
+import org.cactoos.text.Split;
+import org.cactoos.text.TextOf;
+import org.cactoos.text.Trimmed;
+import org.cactoos.text.UncheckedText;
+
+/**
+ * Media type.
+ *
+ * <p>The class is immutable and thread-safe.</p>
+ *
+ * @see org.takes.facets.fork.FkTypes
+ * @since 0.6
+ */
+@ToString
+@EqualsAndHashCode
+final class MediaType implements Comparable<MediaType> {
+
+    /**
+     * Pattern matching non-digit symbols.
+     */
+    private static final Pattern NON_DIGITS = Pattern.compile("[^0-9\\.]");
+
+    /**
+     * Priority.
+     */
+    private final Unchecked<Double> prio;
+
+    /**
+     * High part.
+     */
+    private final Unchecked<String> high;
+
+    /**
+     * Low part.
+     */
+    private final Unchecked<String> low;
+
+    /**
+     * Ctor.
+     *
+     * @param text Text to parse
+     */
+    MediaType(final String text) {
+        this.prio = new Unchecked<>(
+            new Sticky<>(() -> MediaType.priority(text))
+        );
+        this.high = new Unchecked<>(
+            new Sticky<>(() -> MediaType.highPart(text))
+        );
+        this.low = new Unchecked<>(
+            new Sticky<>(() -> MediaType.lowPart(text))
+        );
+    }
+
+    @Override
+    public int compareTo(final MediaType type) {
+        int cmp = this.prio.value().compareTo(type.prio.value());
+        if (cmp == 0) {
+            cmp = this.high.value().compareTo(type.high.value());
+            if (cmp == 0) {
+                cmp = this.low.value().compareTo(type.low.value());
+            }
+        }
+        return cmp;
+    }
+
+    /**
+     * Matches.
+     *
+     * @param type Another type
+     * @return TRUE if matches
+     * @checkstyle BooleanExpressionComplexityCheck (10 lines)
+     */
+    boolean matches(final MediaType type) {
+        final String star = "*";
+        return (this.high.value().equals(star)
+            || type.high.value().equals(star)
+            || this.high.value().equals(type.high.value()))
+            && (this.low.value().equals(star)
+            || type.low.value().equals(star)
+            || this.low.value().equals(type.low.value()));
+    }
+
+    private static List<Text> split(final String text) {
+        return new ListOf<>(
+            new Split(
+                new TextOf(text),
+                ";",
+                2
+            )
+        );
+    }
+
+    private static Double priority(final String text) {
+        final List<Text> parts = MediaType.split(text);
+        final Double priority;
+        if (parts.size() > 1) {
+            final String num = MediaType.NON_DIGITS.matcher(
+                new UncheckedText(
+                    parts.get(1)
+                ).asString()
+            ).replaceAll("");
+            if (num.isEmpty()) {
+                priority = 0.0d;
+            } else {
+                priority = Double.parseDouble(num);
+            }
+        } else {
+            priority = 1.0d;
+        }
+        return priority;
+    }
+
+    private static String highPart(final String text) {
+        return new UncheckedText(
+            MediaType.sectors(text).get(0)
+        ).asString();
+    }
+
+    private static String lowPart(final String text) {
+        final List<Text> sectors = MediaType.sectors(text);
+        final Text sector;
+        if (sectors.size() > 1) {
+            sector = new Trimmed(sectors.get(1));
+        } else {
+            sector = new TextOf("");
+        }
+        return new UncheckedText(sector).asString();
+    }
+
+    private static List<Text> sectors(final String text) {
+        return new ListOf<>(
+            new Split(
+                new UncheckedText(new Lowered(MediaType.split(text).get(0))),
+                "/",
+                2
+            )
+        );
+    }
+}

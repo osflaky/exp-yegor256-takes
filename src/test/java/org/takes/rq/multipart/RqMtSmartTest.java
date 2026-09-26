@@ -1,0 +1,310 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Yegor Bugayenko
+ * SPDX-License-Identifier: MIT
+ */
+package org.takes.rq.multipart;
+
+import com.jcabi.http.request.JdkRequest;
+import com.jcabi.http.response.RestResponse;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang.StringUtils;
+import org.cactoos.Text;
+import org.cactoos.io.InputStreamOf;
+import org.cactoos.io.WriterTo;
+import org.cactoos.scalar.LengthOf;
+import org.cactoos.text.Joined;
+import org.cactoos.text.UncheckedText;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.takes.Request;
+import org.takes.Take;
+import org.takes.http.FtRemote;
+import org.takes.rq.RqFake;
+import org.takes.rq.RqPrint;
+import org.takes.rq.TempInputStream;
+import org.takes.rs.RsText;
+
+/**
+ * Test case for {@link RqMtSmart}.
+ *
+ * @since 0.33
+ */
+@SuppressWarnings({"PMD.UnnecessaryLocalRule", "PMD.CloseInlineResourceRule"})
+final class RqMtSmartTest {
+
+    /**
+     * Body element.
+     */
+    private static final String BODY_ELEMENT = "--zzz";
+
+    /**
+     * Content type.
+     */
+    private static final String CONTENT_TYPE =
+        "Content-Type: multipart/form-data; boundary=zzz";
+
+    /**
+     * Carriage return constant.
+     */
+    private static final String CRLF =
+        String.valueOf((char) 13) + (char) 10;
+
+    /**
+     * Content disposition plus form data.
+     */
+    private static final String CONTENT = String.format(
+        "%s: %s", "Content-Disposition", "form-data; name=\"%s\""
+    );
+
+    @Test
+    @Tag("deep")
+    void returnsCorrectPartLength() throws Exception {
+        final String post = "POST /post?u=3 HTTP/1.1";
+        final int length = 5000;
+        final String part = "x-1";
+        final Text body =
+            new Joined(
+                RqMtSmartTest.CRLF,
+                RqMtSmartTest.BODY_ELEMENT,
+                String.format(RqMtSmartTest.CONTENT, part),
+                "",
+                StringUtils.repeat("X", length),
+                String.format("%s--", RqMtSmartTest.BODY_ELEMENT)
+            );
+        final Request req = new RqFake(
+            Arrays.asList(
+                post,
+                "Host: www.example.com",
+                RqMtSmartTest.contentLengthHeader(
+                    new LengthOf(body).value()
+                ),
+                RqMtSmartTest.CONTENT_TYPE
+            ),
+            body
+        );
+        final RqMtSmart regsmart = new RqMtSmart(
+            new RqMtBase(req)
+        );
+        try {
+            MatcherAssert.assertThat(
+                "Part body must have the correct available byte count",
+                regsmart.single(part).body().available(),
+                Matchers.equalTo(length)
+            );
+        } finally {
+            req.body().close();
+            regsmart.part(part).iterator().next().body().close();
+        }
+    }
+
+    @Test
+    @Tag("deep")
+    void identifiesBoundary() throws Exception {
+        final int length = 9000;
+        final String part = "foo-1";
+        final Text body =
+            new Joined(
+                RqMtSmartTest.CRLF,
+                "----foo",
+                String.format(RqMtSmartTest.CONTENT, part),
+                "",
+                StringUtils.repeat("F", length),
+                "",
+                "----foo--"
+            );
+        final Request req = new RqFake(
+            Arrays.asList(
+                "POST /post?foo=3 HTTP/1.1",
+                "Host: www.foo.com",
+                RqMtSmartTest.contentLengthHeader(
+                    new LengthOf(body).value()
+                ),
+                "Content-Type: multipart/form-data; boundary=--foo"
+            ),
+            body
+        );
+        final RqMtSmart regsmart = new RqMtSmart(
+            new RqMtBase(req)
+        );
+        try {
+            MatcherAssert.assertThat(
+                "Multipart with custom boundary must have correct part length",
+                regsmart.single(part).body().available(),
+                Matchers.equalTo(length)
+            );
+        } finally {
+            req.body().close();
+            regsmart.part(part).iterator().next().body().close();
+        }
+    }
+
+    @Test
+    @Tag("deep")
+    void consumesHttpRequest() throws Exception {
+        final String part = "f-1";
+        final Take take = req -> new RsText(
+            new RqPrint(
+                new RqMtSmart(
+                    new RqMtBase(req)
+                ).single(part)
+            ).printBody()
+        );
+        final Text body =
+            new Joined(
+                RqMtSmartTest.CRLF,
+                "--AaB0zz",
+                String.format(RqMtSmartTest.CONTENT, part), "",
+                "my picture", "--AaB0zz--"
+            );
+        final AtomicReference<String> resp = new AtomicReference<>();
+        new FtRemote(take).exec(
+            home -> resp.set(
+                new JdkRequest(home).method("POST").header(
+                    "Content-Type",
+                    "multipart/form-data; boundary=AaB0zz"
+                ).header(
+                    "Content-Length",
+                    String.valueOf(
+                        new LengthOf(body).value()
+                    )
+                ).body().set(new UncheckedText(body).asString()).back()
+                    .fetch()
+                    .as(RestResponse.class)
+                    .body()
+            )
+        );
+        MatcherAssert.assertThat(
+            "Multipart HTTP request must be parsed correctly over HTTP",
+            resp.get(),
+            Matchers.containsString("pic")
+        );
+    }
+
+    @Test
+    @Tag("performance")
+    void handlesLargeRequestCorrectly(@TempDir final Path temp) throws IOException {
+        final int length = 100_000_000;
+        final String part = "test";
+        final File file = RqMtSmartTest.largeFile(temp, length, part);
+        final Request req = RqMtSmartTest.largeRequest(file);
+        final RqMtSmart smart = new RqMtSmart(new RqMtBase(req));
+        try {
+            MatcherAssert.assertThat(
+                "Large multipart request must have correct part length",
+                smart.single(part).body().available(),
+                Matchers.equalTo(length)
+            );
+        } finally {
+            req.body().close();
+            smart.part(part).iterator().next().body().close();
+        }
+    }
+
+    @Test
+    @Tag("deep")
+    void notDistortContent(@TempDir final Path temp) throws Exception {
+        final int length = 1_000_000;
+        final String part = "test1";
+        final Path file = temp.resolve("notDistortContent.tmp");
+        final String head =
+            new Joined(
+                RqMtSmartTest.CRLF,
+                "--zzz1",
+                String.format(RqMtSmartTest.CONTENT, part),
+                "",
+                ""
+            ).asString();
+        final int the = 0x7F;
+        final String foot =
+            new Joined(
+                RqMtSmartTest.CRLF,
+                "",
+                "--zzz1--",
+                ""
+            ).asString();
+        final byte[] expected = new byte[length];
+        try (BufferedWriter bwr = new BufferedWriter(new WriterTo(file))) {
+            bwr.write(head);
+            for (int idx = 0; idx < length; ++idx) {
+                bwr.write(idx % the);
+                expected[idx] = (byte) (idx % the);
+            }
+            bwr.write(foot);
+        }
+        final Request req = new RqFake(
+            Arrays.asList(
+                "POST /post?u=5 HTTP/1.1",
+                "Host: example.com",
+                RqMtSmartTest.contentLengthHeader(
+                    head.getBytes(StandardCharsets.UTF_8).length
+                        + length + foot.getBytes(StandardCharsets.UTF_8).length
+                ),
+                "Content-Type: multipart/form-data; boundary=zzz1"
+            ),
+            new TempInputStream(new InputStreamOf(file), file.toFile())
+        );
+        try (
+            InputStream stream = new RqMtSmart(
+                new RqMtBase(req)
+            ).single(part).body()
+        ) {
+            MatcherAssert.assertThat(
+                "Stream content must match expected bytes",
+                stream.readAllBytes(),
+                Matchers.equalTo(expected)
+            );
+        } finally {
+            req.body().close();
+        }
+    }
+
+    private static File largeFile(
+        final Path temp, final int length, final String part
+    ) throws IOException {
+        final File file = temp.resolve("handlesRequestInTime.tmp").toFile();
+        try (BufferedWriter bwr = new BufferedWriter(new WriterTo(file))) {
+            bwr.write(
+                new Joined(
+                    RqMtSmartTest.CRLF,
+                    RqMtSmartTest.BODY_ELEMENT,
+                    String.format(RqMtSmartTest.CONTENT, part),
+                    "",
+                    ""
+                ).toString()
+            );
+            for (int ind = 0; ind < length; ++ind) {
+                bwr.write("X");
+            }
+            bwr.write(RqMtSmartTest.CRLF);
+            bwr.write(String.format("%s---", RqMtSmartTest.BODY_ELEMENT));
+            bwr.write(RqMtSmartTest.CRLF);
+        }
+        return file;
+    }
+
+    private static Request largeRequest(final File file) throws IOException {
+        return new RqFake(
+            Arrays.asList(
+                "POST /post?u=4 HTTP/1.1",
+                "Host: example.com",
+                RqMtSmartTest.CONTENT_TYPE,
+                String.format("Content-Length:%s", file.length())
+            ),
+            new TempInputStream(new InputStreamOf(file), file)
+        );
+    }
+
+    private static String contentLengthHeader(final long length) {
+        return String.format("Content-Length: %d", length);
+    }
+}
